@@ -209,6 +209,7 @@ input[type="file"] {
 .folder-name {
   cursor: pointer;
   font-size: 12px;
+  color: #6eb1f8;
 }
 
 

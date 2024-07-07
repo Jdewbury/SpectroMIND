@@ -93,6 +93,30 @@ def directory_structure():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/save-filtered-data', methods=['POST'])
+def save_filtered_data():
+    data = request.get_json()
+    filename = data.get('filename')
+    filtered_data = data.get('data')
+
+    if not filename or filtered_data is None:
+        return jsonify({'error': 'Invalid data'}), 400
+
+    try:
+        base, ext = os.path.splitext(filename)
+        new_filename = f"{base}_filtered{ext}"
+        folder_path = os.path.join(app.config['UPLOAD_FOLDER'], 'filtered_output')
+        
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+
+        file_path = os.path.join(folder_path, new_filename)
+        np.save(file_path, np.array(filtered_data))
+
+        return jsonify({'message': f'Filtered data saved as {new_filename}'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.after_request
 def after_request(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
