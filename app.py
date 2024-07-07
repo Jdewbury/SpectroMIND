@@ -1,3 +1,5 @@
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
 import numpy as np
@@ -9,6 +11,8 @@ ALLOWED_EXTENSIONS = {'npy'}
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB limit
+
+executor = ThreadPoolExecutor()
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -33,7 +37,7 @@ def upload_multiple_files():
         return jsonify({'message': 'Files uploaded successfully'}), 200
     
     except Exception as e:
-        print(f'Error: {str(e)}')  # Log the error to the console
+        print(f'Error: {str(e)}') 
         return jsonify({'error': str(e)}), 500
 
 @app.route('/list-files', methods=['GET'])
@@ -44,7 +48,7 @@ def list_files():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/file-data/<filename>', methods=['GET'])
+@app.route('/file-data/<path:filename>', methods=['GET'])
 def file_data(filename):
     try:
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -64,10 +68,28 @@ def delete_file():
     try:
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         if os.path.exists(file_path):
-            os.remove(file_path)
-            return jsonify({'message': f'{filename} has been deleted'})
+            executor.submit(os.remove, file_path)
+            return jsonify({'message': f'{filename} has been scheduled for deletion'})
         else:
             return jsonify({'error': f'{filename} not found'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+def get_directory_structure(path):
+    structure = {}
+    for item in os.listdir(path):
+        item_path = os.path.join(path, item)
+        if os.path.isdir(item_path):
+            structure[item] = get_directory_structure(item_path)
+        elif item.endswith('.npy'):
+            structure[item] = 'file'
+    return structure
+
+@app.route('/directory-structure', methods=['GET'])
+def directory_structure():
+    try:
+        structure = get_directory_structure(app.config['UPLOAD_FOLDER'])
+        return jsonify({'structure': structure})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -82,4 +104,3 @@ if __name__ == '__main__':
     if not os.path.exists(UPLOAD_FOLDER):
         os.makedirs(UPLOAD_FOLDER)
     app.run(debug=True)
-
