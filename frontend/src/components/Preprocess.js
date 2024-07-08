@@ -33,6 +33,7 @@ const Preprocess = () => {
   const [file, setFile] = useState([]);
   const [directoryStructure, setDirectoryStructure] = useState({});
   const [expandedFolders, setExpandedFolders] = useState({});
+  const [outputFolder, setOutputFolder] = useState('');
 
   useEffect(() => {
     fetchDirectoryStructure();
@@ -86,7 +87,8 @@ const Preprocess = () => {
     try {
       const response = await axios.post(`${API_BASE_URL}/save-filtered-data`, {
         filename: selectedFile,
-        data: filteredData
+        data: filteredData,
+        outputFolder: outputFolder
       });
       setMessage(response.data.message);
       fetchDirectoryStructure();
@@ -219,7 +221,15 @@ const Preprocess = () => {
           <div className="filter-actions">
             <button onClick={applyFilters}>Apply Filters</button>
             {filteredData && (
-              <button onClick={saveFilteredData}>Save Filtered Data</button>
+              <>
+                <input
+                  type="text"
+                  value={outputFolder}
+                  onChange={(e) => setOutputFolder(e.target.value)}
+                  placeholder="Output folder (optional)"
+                />
+                <button onClick={saveFilteredData}>Save Filtered Data</button>
+              </>
             )}
           </div>
         </div>

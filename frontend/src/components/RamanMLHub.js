@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Preprocess from './Preprocess';
-// import Train from './Train';
-// import Evaluate from './Evaluate';
+import Train from './Train';
+import Evaluate from './Evaluate';
 
 const RamanMLHub = () => {
   const [activeTab, setActiveTab] = useState('preprocess');
@@ -13,7 +13,7 @@ const RamanMLHub = () => {
       case 'train':
         return <div>Train component placeholder</div>;
       case 'evaluate':
-        return <div>Evaluate component placeholder</div>;
+        return <Evaluate />;
       default:
         return null;
     }
