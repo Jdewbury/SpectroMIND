@@ -30,6 +30,11 @@
   margin-bottom: 10px;
 }
 
+h3 {
+  font-size: 15px;
+  margin-top: -5px;
+}
+
 .tab-button {
   color: #333333;
   flex: 1;
@@ -86,11 +91,17 @@
   border-width: 1px;
 }
 
+.filters h3{
+  margin-top:-5px;
+  margin-bottom: 5px;
+}
+
 .filter-options {
   display: flex;
   flex-direction: column;
   gap: 10px;
   margin-bottom: 15px;
+  font-size: 13px;
 }
 
 .filter-actions {
@@ -154,7 +165,7 @@
   flex-direction: column;
   margin-bottom: 20px;
   overflow-y: auto;
-  max-height: 300px;
+  max-height: 350px;
   border-style: solid;
   border-color: #d5d5d5;
   border-width: 1px;
@@ -210,6 +221,132 @@ input[type="file"] {
   cursor: pointer;
   font-size: 12px;
   color: #6eb1f8;
+}
+
+/* Evaluate */
+.evaluate-container {
+  display: flex;
+  gap: 20px;
+}
+
+.sidebar {
+  flex: 1;
+  background-color: white;
+  border-radius: 2px;
+  padding: 20px;
+  border: 1px solid #d5d5d5;
+  max-width: 300px;
+}
+
+.main-content {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.input-group {
+  margin-bottom: 15px;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 5px;
+  border: 1px solid #d5d5d5;
+  border-radius: 2px;
+}
+
+.error-message, .success-message {
+  padding: 10px;
+  border-radius: 2px;
+  margin-bottom: 10px;
+}
+
+.error-message {
+  background-color: #ffebee;
+  border: 1px solid #ffcdd2;
+  color: #b71c1c;
+}
+
+.success-message {
+  background-color: #e8f5e9;
+  border: 1px solid #c8e6c9;
+  color: #1b5e20;
+  height: 8px;
+  margin-top: 10px;
+}
+
+.success-message p{
+  margin-top: -5px;
+  font-size: 14px;
+}
+
+.results-container {
+  background-color: white;
+  border-radius: 2px;
+  padding: 20px;
+  border: 1px solid #d5d5d5;
+}
+
+.metrics {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.metric {
+  text-align: center;
+}
+
+.metric h3 {
+  margin-bottom: 5px;
+}
+
+.charts {
+  margin-bottom: 20px;
+}
+
+.confusion-matrix {
+  margin-top: 20px;
+}
+
+.confusion-matrix h3 {
+  margin-bottom: 10px;
+}
+
+.wavenumber-inputs h3{
+  font-size: 15px;
+  margin-top: -5px;
+}
+
+.wavenumber-inputs input{
+  font-size: 12px;
+  width: 40px;
+  margin-right: 15px;
+  margin-left: 5px;
+}
+
+.wavenumber-fields {
+  font-size: 13px;
+  margin-right: 5px;
+}
+
+.no-data {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.no-data p {
+  font-size: 15px;
+  color: #888;
+  text-align: center;
 }
 
 

@@ -1,13 +1,13 @@
 import React from 'react';
-import RamanMLHub from './components/RamanMLHub';
+import RamanML from './components/RamanML';
 import './App.css';
 
 function App() {
   return (
     <div className="app">
       <div className="container">
-        <h1 className="title">RamanML Hub</h1>
-        <RamanMLHub />
+        <h1 className="title">Raman ML</h1>
+        <RamanML />
       </div>
     </div>
   );

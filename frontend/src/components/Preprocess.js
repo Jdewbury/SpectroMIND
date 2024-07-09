@@ -34,6 +34,8 @@ const Preprocess = () => {
   const [directoryStructure, setDirectoryStructure] = useState({});
   const [expandedFolders, setExpandedFolders] = useState({});
   const [outputFolder, setOutputFolder] = useState('');
+  const [minWavenumber, setMinWavenumber] = useState('');
+  const [maxWavenumber, setMaxWavenumber] = useState('');
 
   useEffect(() => {
     fetchDirectoryStructure();
@@ -187,22 +189,66 @@ const Preprocess = () => {
     }
   };
 
+  const getWavenumberRange = (length) => {
+    const min = parseFloat(minWavenumber);
+    const max = parseFloat(maxWavenumber);
+
+    if (!isNaN(min) && !isNaN(max) && min < max) {
+      const step = (max - min) / (length - 1);
+      return Array.from({ length }, (_, index) => min + index * step);
+    }
+
+    return Array.from({ length }, (_, index) => index);
+  };
+
   return (
     <div className="preprocess-container">
       <div className="main-content">
-        <div className="data-visualization">
-          {(fileData || filteredData) && (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={(filteredData || fileData).map((y, index) => ({ x: index, y }))}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="x" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="y" stroke="#8884d8" dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
+      <div className="data-visualization">
+        {fileData || filteredData ? (
+          <ResponsiveContainer width="100%" height={300}>
+              <LineChart
+                data={(filteredData || fileData).map((y, index) => ({
+                  x: Math.round(getWavenumberRange(fileData.length)[index]),
+                  y
+                }))}
+              >   
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="x" label={{ value: 'Wavenumber', position: 'insideBottomRight', offset: -5 }} tick={{ fontSize: 12 }}/>
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="y" stroke="#8884d8" dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="no-data">
+            <p>Please select file to visualize</p>
+          </div>
+        )}
+      </div>
+        <div className="wavenumber-inputs">
+          <h3>Wavenumber Range</h3>
+          <div className="wavenumber-fields">
+            <label>
+              Min Wavenumber:
+              <input
+                type="number"
+                value={minWavenumber}
+                onChange={(e) => setMinWavenumber(e.target.value)}
+                placeholder="min"
+              />
+            </label>
+            <label>
+              Max Wavenumber:
+              <input
+                type="number"
+                value={maxWavenumber}
+                onChange={(e) => setMaxWavenumber(e.target.value)}
+                placeholder="max"
+              />
+            </label>
+          </div>
         </div>
         <div className="filters">
           <h3>Filters</h3>
@@ -213,6 +259,7 @@ const Preprocess = () => {
                   type="checkbox"
                   checked={activeFilters[filterName] || false}
                   onChange={() => handleFilterChange(filterName)}
+                  style={{ verticalAlign: 'middle', marginRight: '5px' }}
                 />
                 {filterName}
               </label>
@@ -255,6 +302,7 @@ const Preprocess = () => {
 };
 
 export default Preprocess;
+
 
 
 

@@ -13,6 +13,7 @@ from model.resnet_1d import ResNet
 from dataset import RamanSpectra
 from utils.smooth_cross_entropy import smooth_crossentropy
 import time
+from sklearn import metrics
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -316,6 +317,8 @@ def evaluate():
 
         batch_loss = []
         batch_acc = []
+        all_predictions = []
+        all_targets = []
 
         start_time = time.time()
         with torch.no_grad():
@@ -328,10 +331,13 @@ def evaluate():
                 loss = smooth_crossentropy(predictions, targets)
                 correct = torch.argmax(predictions, 1) == targets
                 accuracy = correct.float().mean().item()
-                loss_avg=loss.mean().item()
+                loss_avg = loss.mean().item()
 
                 batch_loss.append(loss_avg)
                 batch_acc.append(accuracy)
+
+                all_predictions.extend(torch.argmax(predictions, 1).cpu().numpy())
+                all_targets.extend(targets.cpu().numpy())
 
         end_time = time.time()
         inference_time = end_time - start_time
@@ -339,14 +345,24 @@ def evaluate():
         test_loss = np.mean(batch_loss)
         test_accuracy = np.mean(batch_acc)
 
+        # Calculate confusion matrix
+        confusion_matrix = metrics.confusion_matrix(all_targets, all_predictions)
+        
+        # Normalize confusion matrix
+        cm_normalized = confusion_matrix.astype('float') / confusion_matrix.sum(axis=1)[:, np.newaxis]
+        cm_normalized_list = cm_normalized.tolist()
+        class_labels_list = np.arange(params['num_classes']).tolist()
+
         print('Test Loss: ', test_loss, 'Test Acc: ', test_accuracy)
 
         results = {
             'test-time': inference_time,
             'test-loss': test_loss,
             'test-acc': test_accuracy,
+            'confusion_matrix': cm_normalized_list,
+            'class_labels': class_labels_list
         }
-        # Clean up uploaded files
+
         print("Cleaning up uploaded files...")
         os.remove(params_path)
         os.remove(weights_path)
@@ -371,4 +387,4 @@ def after_request(response):
 if __name__ == '__main__':
     if not os.path.exists(UPLOAD_FOLDER):
         os.makedirs(UPLOAD_FOLDER)
-    app.run(debug=True)
+    app.run(debug=False)

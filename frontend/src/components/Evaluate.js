@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const Evaluate = () => {
   const [params, setParams] = useState(null);
@@ -14,24 +15,18 @@ const Evaluate = () => {
   const handleFileChange = (event, setterFunction) => {
     const files = Array.from(event.target.files);
     setterFunction(files);
-    console.log(`Files selected (${setterFunction.name}):`, event.target.files);
-    console.log(`Number of files selected (${setterFunction.name}):`, files.length);
   };
 
   const handleIntervalChange = (event) => {
-    const value = event.target.value;
-    console.log('Interval input:', value);
-    setIntervals(value);
+    setIntervals(event.target.value);
   };
 
   const handleParamChange = (event) => {
-    const file = event.target.files[0]; 
-    setParams(file);
+    setParams(event.target.files[0]);
   };
 
   const handleWeightChange = (event) => {
-    const file = event.target.files[0];
-    setWeights(file);
+    setWeights(event.target.files[0]);
   };
 
   const allowedExtensions = ['npy', 'pth'];
@@ -40,13 +35,8 @@ const Evaluate = () => {
     const extension = file.name.split('.').pop().toLowerCase();
     return allowedExtensions.includes(extension);
   };
-  
-  const handleEvaluate = async () => {
-    // Clear previous messages
-    setError('');
-    setMessage('');
-    setResults(null);
 
+  const handleEvaluate = async () => {
     console.log('Starting evaluation...');
     if (!params || !weights || datasets.length === 0 || labels.length === 0 || !intervals) {
       setError('Please upload all required files and specify intervals');
@@ -84,8 +74,12 @@ const Evaluate = () => {
     }
   
     const formData = new FormData();
+  
+    // Read weights file as ArrayBuffer
+    const weightsArrayBuffer = await weights.arrayBuffer();
+    formData.append('weights', new Blob([weightsArrayBuffer]), weights.name);
+  
     formData.append('params', params);
-    formData.append('weights', weights);
     datasets.forEach((dataset, index) => {
       formData.append(`dataset_${index}`, dataset);
     });
@@ -109,52 +103,133 @@ const Evaluate = () => {
         console.log('Parsed response data:', data);
         setResults(data.results);
         setMessage('Evaluation completed successfully');
+        setError('');
       } else {
         console.error('Server returned an error:', response.status, response.statusText);
         const errorData = await response.json();
         setError(`Error: ${errorData.error}`);
+        setMessage('');
       }
     } catch (error) {
       console.error('Fetch error:', error);
       setError(`Error: ${error.message}`);
+      setMessage('');
     } finally {
       setIsLoading(false);
     }
   };
 
-  return (
-    <div>
-      <h1>Evaluate Model</h1>
-      <div>
-        <input type="file" accept=".npy" onChange={(e) => handleParamChange(e, setParams)} />
-        <label>Params File (.npy)</label>
-      </div>
-      <div>
-        <input type="file" accept=".pth" onChange={(e) => handleWeightChange(e, setWeights)} />
-        <label>Weights File (.pth)</label>
-      </div>
-      <div>
-        <input type="file" accept=".npy" multiple onChange={(e) => handleFileChange(e, setDatasets)} />
-        <label>Dataset Files (.npy)</label>
-      </div>
-      <div>
-        <input type="file" accept=".npy" multiple onChange={(e) => handleFileChange(e, setLabels)} />
-        <label>Label Files (.npy)</label>
-      </div>
-      <div>
-        <input type="text" value={intervals} onChange={handleIntervalChange} />
-        <label>Spectra Intervals (comma-separated)</label>
-      </div>
-      <button onClick={handleEvaluate}>Evaluate</button>
-      {isLoading && <p>Loading...</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      {message && <p>{message}</p>}
-      {results && (
-        <div>
-          <h2>Results</h2>
-          <pre>{JSON.stringify(results, null, 2)}</pre>
+  const renderConfusionMatrix = (confusionMatrix, classLabels) => {
+    if (!confusionMatrix || confusionMatrix.length === 0) return null;
+
+    const maxValue = Math.max(...confusionMatrix.flat());
+
+    return (
+      <div className="confusion-matrix">
+        <h3>Confusion Matrix</h3>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ borderCollapse: 'collapse', margin: '20px 0' }}>
+            <thead>
+              <tr>
+                <th style={{ padding: '8px', border: '1px solid #ddd' }}></th>
+                {classLabels.map((label, index) => (
+                  <th key={index} style={{ padding: '8px', border: '1px solid #ddd', writingMode: 'vertical-rl', textOrientation: 'mixed' }}>
+                    {label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {confusionMatrix.map((row, i) => (
+                <tr key={i}>
+                  <th style={{ padding: '8px', border: '1px solid #ddd' }}>{classLabels[i]}</th>
+                  {row.map((value, j) => (
+                    <td
+                      key={j}
+                      style={{
+                        padding: '8px',
+                        border: '1px solid #ddd',
+                        backgroundColor: `rgba(0, 0, 255, ${value / maxValue})`,
+                        color: value / maxValue > 0.5 ? 'white' : 'black',
+                        textAlign: 'center'
+                      }}
+                    >
+                      {value.toFixed(2)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
+        <div>
+          <p>True labels on rows, predicted labels on columns</p>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="evaluate-container">
+      <div className="sidebar">
+        <h2>Evaluation Input</h2>
+        <div className="input-group">
+          <label>Params File (.npy)</label>
+          <input type="file" accept=".npy" onChange={handleParamChange} />
+        </div>
+        <div className="input-group">
+          <label>Weights File (.pth)</label>
+          <input type="file" accept=".pth" onChange={handleWeightChange} />
+        </div>
+        <div className="input-group">
+          <label>Dataset Files (.npy)</label>
+          <input type="file" accept=".npy" multiple onChange={(e) => handleFileChange(e, setDatasets)} />
+        </div>
+        <div className="input-group">
+          <label>Label Files (.npy)</label>
+          <input type="file" accept=".npy" multiple onChange={(e) => handleFileChange(e, setLabels)} />
+        </div>
+        <div className="input-group">
+          <label>Spectra Intervals (comma-separated)</label>
+          <input type="text" value={intervals} onChange={handleIntervalChange} />
+        </div>
+        <button onClick={handleEvaluate} disabled={isLoading}>
+          {isLoading ? 'Evaluating...' : 'Evaluate'}
+        </button>
+        {message && (
+          <div className="success-message">
+            <p>{message}</p>
+          </div>
+        )}
+      </div>
+      <div className="main-content">
+        {error && (
+          <div className="error-message">
+            <h3>Error</h3>
+            <p>{error}</p>
+          </div>
+        )}
+        {results && (
+          <div className="results-container">
+            <h2>Evaluation Results</h2>
+            <div className="metrics">
+              <div className="metric">
+                <h3>Test Loss</h3>
+                <p>{results['test-loss'].toFixed(4)}</p>
+              </div>
+              <div className="metric">
+                <h3>Test Accuracy</h3>
+                <p>{(results['test-acc'] * 100).toFixed(2)}%</p>
+              </div>
+              <div className="metric">
+                <h3>Inference Time</h3>
+                <p>{results['test-time'].toFixed(2)}s</p>
+              </div>
+            </div>
+            {results.confusion_matrix && renderConfusionMatrix(results.confusion_matrix, results.class_labels)}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
