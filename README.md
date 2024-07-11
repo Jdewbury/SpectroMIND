@@ -1,2 +1,2 @@
-# RamanML Hub
-RamanML Hub: Empowering advanced Raman spectral data analysis with cutting-edge machine learning tools.
+#SpectroMIND
+A framework for uploading, preprocessing, and training machine learning models on Raman spectral data, designed for seamless integration and advanced analytics.
