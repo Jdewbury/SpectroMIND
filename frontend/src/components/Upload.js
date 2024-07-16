@@ -3,7 +3,7 @@ import React from 'react';
 const Upload = ({ handleFileChange, handleUpload, file, error, message, isLoading }) => {
   return (
     <div>
-      <h2>Upload Files</h2>
+      <h3>Upload Files</h3>
       <input type="file" multiple onChange={handleFileChange} />
       <button onClick={handleUpload} disabled={isLoading}>
         {isLoading ? 'Uploading...' : 'Upload'}

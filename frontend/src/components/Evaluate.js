@@ -172,7 +172,7 @@ const Evaluate = () => {
   return (
     <div className="evaluate-container">
       <div className="sidebar">
-        <h2>Evaluation Input</h2>
+        <h3>Evaluation Input</h3>
         <div className="input-group">
           <label>Params File (.npy)</label>
           <input type="file" accept=".npy" onChange={handleParamChange} />
@@ -197,7 +197,7 @@ const Evaluate = () => {
           {isLoading ? 'Evaluating...' : 'Evaluate'}
         </button>
         {message && (
-          <div className="success-message">
+          <div className="upload-message">
             <p>{message}</p>
           </div>
         )}

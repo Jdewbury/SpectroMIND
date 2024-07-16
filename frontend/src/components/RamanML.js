@@ -5,13 +5,26 @@ import Evaluate from './Evaluate';
 
 const RamanML = () => {
   const [activeTab, setActiveTab] = useState('preprocess');
+  const [isTraining, setIsTraining] = useState(false);
+  const [trainingStatus, setTrainingStatus] = useState('');
+  const [trainingProgress, setTrainingProgress] = useState(0);
+  const [errorDetails, setErrorDetails] = useState('');
 
   const renderTab = () => {
     switch (activeTab) {
       case 'preprocess':
         return <Preprocess />;
       case 'train':
-        return <div>Train component placeholder</div>;
+        return <Train 
+          isTraining={isTraining}
+          setIsTraining={setIsTraining}
+          trainingStatus={trainingStatus}
+          setTrainingStatus={setTrainingStatus}
+          trainingProgress={trainingProgress}
+          setTrainingProgress={setTrainingProgress}
+          errorDetails={errorDetails}
+          setErrorDetails={setErrorDetails}
+        />;
       case 'evaluate':
         return <Evaluate />;
       default:

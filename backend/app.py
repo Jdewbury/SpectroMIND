@@ -14,6 +14,9 @@ from dataset import RamanSpectra
 from utils.smooth_cross_entropy import smooth_crossentropy
 import time
 from sklearn import metrics
+import json
+from train import train_model
+from flask import Response
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -22,6 +25,9 @@ ALLOWED_EXTENSIONS = {'npy', 'pth'}
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 100 MB limit
+
+training_in_progress = False
+stop_training_flag = False
 
 executor = ThreadPoolExecutor()
 
@@ -136,9 +142,27 @@ def save_filtered_data():
         return jsonify({'message': f'Filtered data saved as {relative_path}'}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-"""
+
+@app.route('/api/stop-training', methods=['POST'])
+def stop_training():
+    global stop_training_flag
+    global training_in_progress
+    
+    stop_training_flag = True
+    training_in_progress = False
+    return jsonify({'message': 'Training stop signal sent'}), 200
+
 @app.route('/api/train', methods=['POST'])
 def handle_train():
+    global stop_training_flag
+    global training_in_progress
+
+    if training_in_progress:
+        return jsonify({'status': 'error', 'message': 'Training already in progress'}), 400
+
+    stop_training_flag = False
+    training_in_progress = True
+
     try:
         print("Received training request")
         model_name = request.form.get('model')
@@ -153,71 +177,101 @@ def handle_train():
         print("Saving uploaded files...")
         for file in request.files.getlist('dataFolder'):
             filename = secure_filename(file.filename)
-            spectra_dirs.append(filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            spectra_dirs.append(file_path)
 
         label_dirs = []
         for file in request.files.getlist('labelsFolder'):
             filename = secure_filename(file.filename)
-            label_dirs.append(filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            label_dirs.append(file_path)
 
-        print(label_dirs, spectra_dirs)
+        print(f"Spectra dirs: {spectra_dirs}")
+        print(f"Label dirs: {label_dirs}")
+
         # Prepare arguments for train_model function
-        args = SimpleNamespace(
-            model=model_name,
-            spectra_dir=spectra_dirs,
-            label_dir=label_dirs,
-            optimizer=optimizer_name,
-            train_time=100,  # Set default values or get from parameters
-            batch_size=16,
-            learning_rate=float(parameters.get('learning_rate', 0.001)),
-            save=True,
-            seed=42,
-            shuffle=True,
-            train_split=0.7,
-            test_split=0.15,
-            spectra_test_dir=None,
-            label_test_dir=None,
-            in_channels=1,
-            n_classes=30,
-            input_dim=1000,
-        )
+        args = {
+            'model': model_name,
+            'spectra_dir': spectra_dirs,
+            'label_dir': label_dirs,
+            'optimizer': optimizer_name,
+            'epochs': int(parameters.get('epochs', 200)),
+            'batch_size': int(parameters.get('batch_size', 16)),
+            'learning_rate': float(parameters.get('learning_rate', 0.001)),
+            'in_channels': int(parameters.get('in_channels', 64)),
+            'num_classes': int(parameters.get('num_classes', 5)),
+            'input_dim': int(parameters.get('input_dim', 1000)),
+            'label_smoothing': float(parameters.get('label_smoothing', 0.1)),
+            'seed': int(parameters.get('seed', 42)),
+            'shuffle': bool(parameters.get('shuffle', True)),
+            'save': bool(parameters.get('save', False)),
+            'spectra_interval': [int(i) for i in parameters.get('spectra_interval', '400,100').split(',')],
+            'train_split': float(parameters.get('train_split', 0.7)),
+            'test_split': float(parameters.get('test_split', 0.15)),
+        }
 
         # Add model-specific parameters
         if model_name == 'resnet':
-            args.layers = int(parameters.get('layers', 6))
-            args.hidden_size = int(parameters.get('hidden_size', 100))
-            args.block_size = int(parameters.get('block_size', 2))
-            args.activation = parameters.get('activation', 'relu')
+            args['layers'] = int(parameters.get('layers', 6))
+            args['hidden_size'] = int(parameters.get('hidden_size', 100))
+            args['block_size'] = int(parameters.get('block_size', 2))
+            args['activation'] = parameters.get('activation', 'selu')
         elif model_name == 'mlp_flip':
-            args.depth = int(parameters.get('depth', 2))
-            args.token_dim = int(parameters.get('token_dim', 64))
-            args.channel_dim = int(parameters.get('channel_dim', 16))
-            args.patch_size = int(parameters.get('patch_size', 50))
+            args['depth'] = int(parameters.get('depth', 2))
+            args['token_dim'] = int(parameters.get('token_dim', 64))
+            args['channel_dim'] = int(parameters.get('channel_dim', 16))
+            args['patch_size'] = int(parameters.get('patch_size', 50))
 
-        # Add optimizer-specific parameters
-        if optimizer_name in ['SAM', 'ASAM']:
-            args.base_optimizer = parameters.get('base_optimizer', 'SGD')
-            args.rho = float(parameters.get('rho', 0.05))
-        
-        args.momentum = float(parameters.get('momentum', 0.9))
-        args.weight_decay = float(parameters.get('weight_decay', 0.0005))
+        args['base_optimizer'] = parameters.get('base_optimizer', 'SGD')
+        args['rho'] = float(parameters.get('rho', 0.05))
+        args['momentum'] = float(parameters.get('momentum', 0.9))
+        args['weight_decay'] = float(parameters.get('weight_decay', 0.0005))
+        args['scheduler'] = parameters.get('scheduler', 'step')
+        args['lr_step'] = float(parameters.get('lr_step', 0.2))
 
         print("Starting training process...")
-        # Run the training process
-        scores, save_dir = train_model(args)
 
-        print("Training completed successfully")
-        return jsonify({
-            'message': 'Training completed successfully',
-            'scores': scores,
-            'save_directory': save_dir
-        }), 200
+        def generate_response():
+            nonlocal args
+            global training_in_progress, stop_training_flag
+            try:
+                def progress_callback(epoch, total):
+                    return json.dumps({'status': 'progress', 'epoch': epoch, 'total': total})
+
+                for progress in train_model(args, progress_callback=progress_callback, stop_flag=lambda: stop_training_flag):
+                    if stop_training_flag:
+                        yield f"data: {json.dumps({'status': 'stopped'})}\n\n"
+                        return
+                    yield f"data: {progress}\n\n"
+                
+                if not stop_training_flag:
+                    scores, save_dir = train_model(args)
+                    yield f"data: {json.dumps({'status': 'completed', 'scores': scores, 'save_directory': save_dir})}\n\n"
+            except AssertionError as e:
+                error_message = str(e)
+                if "Spectra, labels, and invervals do not align" in error_message:
+                    yield f"data: {json.dumps({'status': 'error', 'message': 'Spectra, labels, and intervals do not align.'})}\n\n"
+                else:
+                    yield f"data: {json.dumps({'status': 'error', 'message': error_message})}\n\n"
+            except Exception as e:
+                print(f"Error during training: {str(e)}")
+                print(traceback.format_exc())
+                yield f"data: {json.dumps({'status': 'error', 'message': str(e), 'traceback': traceback.format_exc()})}\n\n"
+            finally:
+                global training_in_progress
+                training_in_progress = False
+                stop_training_flag = False
+
+        return Response(generate_response(), mimetype='text/event-stream')
 
     except Exception as e:
-        print(f"Error during training: {str(e)}")
-        print(traceback.format_exc())  # This will print the full stack trace
-        return jsonify({'error': str(e), 'traceback': traceback.format_exc()}), 500
-"""
+        print(f"Error during training setup: {str(e)}")
+        print(traceback.format_exc())
+        training_in_progress = False
+        stop_training_flag = False
+        return jsonify({'status': 'error', 'message': str(e), 'traceback': traceback.format_exc()}), 500
 
 @app.route('/evaluate', methods=['POST'])
 def evaluate():
@@ -387,4 +441,4 @@ def after_request(response):
 if __name__ == '__main__':
     if not os.path.exists(UPLOAD_FOLDER):
         os.makedirs(UPLOAD_FOLDER)
-    app.run(debug=False)
+    app.run(debug=False, threaded=True)

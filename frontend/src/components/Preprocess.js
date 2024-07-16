@@ -100,26 +100,32 @@ const Preprocess = () => {
     }
   };
 
-  const handleFileChange = (event) => {
+  const setTimedMessage = (setterFunction, message, duration = 3000) => {
+    setterFunction(message);
+    setTimeout(() => setterFunction(''), duration);
+  };
+
+  const handleFileChange = async (event) => {
     const selectedFiles = Array.from(event.target.files);
     const validFiles = selectedFiles.filter((file) => file.name.endsWith('.npy'));
     
     if (validFiles.length === selectedFiles.length) {
       setFile(validFiles);
       setError('');
+      await handleFileUpload(validFiles);
     } else {
       setFile([]);
       setError('Please select .npy files only');
     }
   };
 
-  const handleFileUpload = async () => {
-    if (file.length === 0) {
-      setError('Please select .npy files');
+  const handleFileUpload = async (filesToUpload) => {
+    if (filesToUpload.length === 0) {
+      setTimedMessage(setError, 'Please select .npy files');
       return;
     }
     const formData = new FormData();
-    file.forEach((f) => formData.append('files[]', f));
+    filesToUpload.forEach((f) => formData.append('files[]', f));
     setIsLoading(true);
     
     try {
@@ -128,11 +134,11 @@ const Preprocess = () => {
           'Content-Type': 'multipart/form-data',
         },
       });
-      setMessage(response.data.message);
+      setTimedMessage(setMessage, response.data.message);
       fetchDirectoryStructure();
     } catch (error) {
       console.error('Upload Error:', error);
-      setError(error.response?.data?.error || 'An error occurred during upload');
+      setTimedMessage(setError, error.response?.data?.error || 'An error occurred during upload');
     } finally {
       setIsLoading(false);
     }
@@ -181,11 +187,11 @@ const Preprocess = () => {
   const deleteFile = async (fileToDelete) => {
     try {
       const response = await axios.post(`${API_BASE_URL}/delete-file`, { filename: fileToDelete });
-      setMessage(response.data.message);
+      setTimedMessage(setMessage, response.data.message);
       fetchDirectoryStructure();
     } catch (error) {
       console.error('Delete Error:', error);
-      setError(error.response?.data?.error || 'An error occurred during deletion');
+      setTimedMessage(setError, error.response?.data?.error || 'An error occurred during deletion');
     }
   };
 
@@ -282,20 +288,25 @@ const Preprocess = () => {
         </div>
       </div>
       <div className="sidebar">
-        <h3>Files</h3>
+        <div className="files-header">
+          <h3>Files</h3>
+          <input
+            type="file"
+            multiple
+            onChange={handleFileChange}
+            style={{ display: 'none' }}
+            id="file-upload"
+            accept=".npy"
+          />
+          <label htmlFor="file-upload" className="upload-button">
+            Upload
+          </label>
+        </div>
         <div className="file-list">
           {renderDirectory(directoryStructure)}
         </div>
-        <div className="file-upload">
-          <Upload
-            handleFileChange={handleFileChange}
-            handleUpload={handleFileUpload}
-            file={file}
-            error={error}
-            message={message}
-            isLoading={isLoading}
-          />
-        </div>
+        {message && <p className="upload-message">{message}</p>}
+        {error && <p className="error-message">{error}</p>}
       </div>
     </div>
   );
