@@ -19,7 +19,7 @@ from train import train_model
 from flask import Response
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app)
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 ALLOWED_EXTENSIONS = {'npy', 'pth'}
 
@@ -237,24 +237,28 @@ def handle_train():
             nonlocal args
             global training_in_progress, stop_training_flag
             try:
-                def progress_callback(epoch, total):
-                    return json.dumps({'status': 'progress', 'epoch': epoch, 'total': total})
-
-                for progress in train_model(args, progress_callback=progress_callback, stop_flag=lambda: stop_training_flag):
+                def progress_callback(epoch, total, loss, accuracy):
+                    return json.dumps({
+                        'status': 'progress',
+                        'epoch': epoch,
+                        'total': total,
+                        'loss': loss,
+                        'accuracy': accuracy
+                    })
+                
+                train_generator = train_model(args, progress_callback=progress_callback, stop_flag=lambda: stop_training_flag)
+                
+                for progress in train_generator:
                     if stop_training_flag:
                         yield f"data: {json.dumps({'status': 'stopped'})}\n\n"
                         return
                     yield f"data: {progress}\n\n"
                 
-                if not stop_training_flag:
-                    scores, save_dir = train_model(args)
-                    yield f"data: {json.dumps({'status': 'completed', 'scores': scores, 'save_directory': save_dir})}\n\n"
-            except AssertionError as e:
-                error_message = str(e)
-                if "Spectra, labels, and invervals do not align" in error_message:
-                    yield f"data: {json.dumps({'status': 'error', 'message': 'Spectra, labels, and intervals do not align.'})}\n\n"
-                else:
-                    yield f"data: {json.dumps({'status': 'error', 'message': error_message})}\n\n"
+                scores, save_dir = next(train_generator)
+                yield f"data: {json.dumps({'status': 'completed', 'scores': scores, 'save_directory': save_dir})}\n\n"
+
+            except StopIteration:
+                yield f"data: {json.dumps({'status': 'completed', 'message': 'Training completed successfully'})}\n\n"
             except Exception as e:
                 print(f"Error during training: {str(e)}")
                 print(traceback.format_exc())

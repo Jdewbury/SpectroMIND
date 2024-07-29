@@ -153,21 +153,21 @@ def train_model(args, progress_callback=None, stop_flag=None):
 
                 log(model, loss.cpu(), correct.cpu())
 
-        epoch_loss_avg = np.mean(batch_loss)
-        epoch_accuracy_avg = np.mean(batch_acc)
-        val_loss.append(epoch_loss_avg)
-        val_accuracy.append(epoch_accuracy_avg)
+        val_epoch_loss_avg = np.mean(batch_loss)
+        val_epoch_accuracy_avg = np.mean(batch_acc)
+        val_loss.append(val_epoch_loss_avg)
+        val_accuracy.append(val_epoch_accuracy_avg)
 
         end_time = time.time()
         epoch_time = end_time - start_time
         time_epochs.append(epoch_time)
 
         if progress_callback:
-            for chunk in progress_callback(epoch + 1, args['epochs']):
-                yield chunk
+            progress_data = progress_callback(epoch + 1, args['epochs'], val_epoch_loss_avg, val_epoch_accuracy_avg)
+            yield progress_data
 
-        if epoch_accuracy_avg > best_acc and args['save']:
-            best_acc = epoch_accuracy_avg
+        if val_epoch_accuracy_avg > best_acc and args['save']:
+            best_acc = val_epoch_accuracy_avg
             torch.save(model.state_dict(), f'{unique_dir}/best_val.pth')
 
     log.done()

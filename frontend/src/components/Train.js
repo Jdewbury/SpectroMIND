@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
+const API_BASE_URL = 'http://localhost:5000';
+
 const generalConfig = {
   epochs: { type: 'number', default: 200, min: 1, max: 1000 },
   batch_size: { type: 'number', default: 16, min: 1, max: 256 },
@@ -74,6 +76,9 @@ const Train = ({
   const [trainingResults, setTrainingResults] = useState(null);
   const [saveDirectory, setSaveDirectory] = useState(null);
   const [activeTab, setActiveTab] = useState('general');
+  const [backendURL, setBackendURL] = useState(API_BASE_URL);
+  const [colabURL, setColabURL] = useState('');
+  const [isUsingColab, setIsUsingColab] = useState(false);
 
   const handleModelChange = (e) => {
     setModel(e.target.value);
@@ -106,6 +111,24 @@ const Train = ({
     if (!dataFolder || dataFolder.length === 0) return 'Please upload data files.';
     if (!labelsFolder || labelsFolder.length === 0) return 'Please upload label files.';
     return null;
+  };
+
+  const handleColabURLSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      // Verify the URL is accessible
+      await axios.get(`${colabURL}/health-check`);
+      setBackendURL(colabURL);
+      setIsUsingColab(true);
+    } catch (error) {
+      console.error('Error connecting to Colab URL:', error);
+      alert('Failed to connect to the provided Colab URL. Please check the URL and try again.');
+    }
+  };
+
+  const handleSwitchToLocal = () => {
+    setBackendURL(API_BASE_URL);
+    setIsUsingColab(false);
   };
 
   const handleTrainSubmit = async (e) => {
@@ -157,10 +180,14 @@ const Train = ({
     });
 
     try {
-      const response = await fetch('http://localhost:5000/api/train', {
+      const response = await fetch(`${backendURL}/api/train`, {
         method: 'POST',
         body: formData,
       });
+
+      if (!response.body) {
+        throw new Error('No response body');
+      }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -202,7 +229,7 @@ const Train = ({
       case 'progress':
         const progress = Math.round((data.epoch / data.total) * 100);
         setTrainingProgress(progress);
-        setTrainingStatus(`Training progress: ${progress}%`);
+        setTrainingStatus(`Training progress: ${progress}% (Loss: ${data.loss.toFixed(4)}, Accuracy: ${(data.accuracy * 100).toFixed(2)}%)`);
         break;
       case 'stopped':
         setIsTraining(false);
@@ -221,7 +248,7 @@ const Train = ({
 
   const handleStopTraining = async () => {
     try {
-      await axios.post('http://localhost:5000/api/stop-training');
+      await axios.post(`${backendURL}/api/stop-training`);
       setTrainingStatus('Stopping training...');
     } catch (error) {
       console.error('Error stopping training:', error);
@@ -272,6 +299,25 @@ const Train = ({
 
   return (
     <div className="train-container">
+      <div className="backend-selector">
+        {isUsingColab ? (
+          <div>
+            <p>Connected to Colab: {backendURL}</p>
+            <button onClick={handleSwitchToLocal}>Switch to Local Backend</button>
+          </div>
+        ) : (
+          <form onSubmit={handleColabURLSubmit}>
+            <input
+              type="url"
+              value={colabURL}
+              onChange={(e) => setColabURL(e.target.value)}
+              placeholder="Enter Colab backend URL"
+              required
+            />
+            <button type="submit">Connect to Colab</button>
+          </form>
+        )}
+      </div>
       <div className="sidebar">
         <h3>Training Input</h3>
         <form onSubmit={handleTrainSubmit}>

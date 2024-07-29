@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
+const API_BASE_URL = 'http://localhost:5000';
+
 const Evaluate = () => {
   const [params, setParams] = useState(null);
   const [weights, setWeights] = useState(null);
@@ -91,7 +93,7 @@ const Evaluate = () => {
     setIsLoading(true);
     try {
       console.log('Sending request to server...');
-      const response = await fetch('http://localhost:5000/evaluate', {
+      const response = await fetch(`${API_BASE_URL}/evaluate`, {
         method: 'POST',
         body: formData,
       });

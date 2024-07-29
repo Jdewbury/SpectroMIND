@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import Upload from './Upload';
 import FileItem from './FileItem';
 
 const API_BASE_URL = 'http://localhost:5000';
@@ -37,19 +36,31 @@ const Preprocess = () => {
   const [minWavenumber, setMinWavenumber] = useState('');
   const [maxWavenumber, setMaxWavenumber] = useState('');
 
+  const fetchDirectoryStructure = async () => {
+    let isMounted = true;
+
+    try {
+      console.log('Fetching directory structure from:', `${API_BASE_URL}/directory-structure`);
+      const response = await axios.get(`${API_BASE_URL}/directory-structure`);
+      console.log('Directory structure response:', response.data);
+      if (isMounted) {
+        setDirectoryStructure(response.data.structure || {});
+      }
+    } catch (error) {
+      console.error('Error fetching directory structure:', error);
+      if (isMounted) {
+        setError('Failed to fetch directory structure. Please try again.');
+      }
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  };
+
   useEffect(() => {
     fetchDirectoryStructure();
   }, []);
-
-  const fetchDirectoryStructure = async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/directory-structure`);
-      setDirectoryStructure(response.data.structure);
-    } catch (error) {
-      console.error('Error fetching directory structure:', error);
-      setError('Failed to fetch directory structure. Please try again.');
-    }
-  };
 
   const handleFileSelect = async (file) => {
     setSelectedFile(file);
@@ -105,20 +116,6 @@ const Preprocess = () => {
     setTimeout(() => setterFunction(''), duration);
   };
 
-  const handleFileChange = async (event) => {
-    const selectedFiles = Array.from(event.target.files);
-    const validFiles = selectedFiles.filter((file) => file.name.endsWith('.npy'));
-    
-    if (validFiles.length === selectedFiles.length) {
-      setFile(validFiles);
-      setError('');
-      await handleFileUpload(validFiles);
-    } else {
-      setFile([]);
-      setError('Please select .npy files only');
-    }
-  };
-
   const handleFileUpload = async (filesToUpload) => {
     if (filesToUpload.length === 0) {
       setTimedMessage(setError, 'Please select .npy files');
@@ -144,11 +141,36 @@ const Preprocess = () => {
     }
   };
 
+  const handleFileChange = async (event) => {
+    const selectedFiles = Array.from(event.target.files);
+    const validFiles = selectedFiles.filter((file) => file.name.endsWith('.npy'));
+    
+    if (validFiles.length === selectedFiles.length) {
+      setFile(validFiles);
+      setError('');
+      await handleFileUpload(validFiles);
+    } else {
+      setFile([]);
+      setError('Please select .npy files only');
+    }
+  };
+
   const toggleFolder = (folderPath) => {
     setExpandedFolders(prev => ({
       ...prev,
       [folderPath]: !prev[folderPath]
     }));
+  };
+
+  const deleteFile = async (fileToDelete) => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/delete-file`, { filename: fileToDelete });
+      setTimedMessage(setMessage, response.data.message);
+      fetchDirectoryStructure();
+    } catch (error) {
+      console.error('Delete Error:', error);
+      setTimedMessage(setError, error.response?.data?.error || 'An error occurred during deletion');
+    }
   };
 
   const renderDirectory = (structure, path = '') => {
@@ -182,17 +204,6 @@ const Preprocess = () => {
         );
       }
     });
-  };
-
-  const deleteFile = async (fileToDelete) => {
-    try {
-      const response = await axios.post(`${API_BASE_URL}/delete-file`, { filename: fileToDelete });
-      setTimedMessage(setMessage, response.data.message);
-      fetchDirectoryStructure();
-    } catch (error) {
-      console.error('Delete Error:', error);
-      setTimedMessage(setError, error.response?.data?.error || 'An error occurred during deletion');
-    }
   };
 
   const getWavenumberRange = (length) => {
@@ -303,7 +314,11 @@ const Preprocess = () => {
           </label>
         </div>
         <div className="file-list">
-          {renderDirectory(directoryStructure)}
+          {Object.keys(directoryStructure).length > 0 ? (
+            renderDirectory(directoryStructure)
+          ) : (
+            <p className="error-message">No files or directories found.</p>
+          )}
         </div>
         {message && <p className="upload-message">{message}</p>}
         {error && <p className="error-message">{error}</p>}
