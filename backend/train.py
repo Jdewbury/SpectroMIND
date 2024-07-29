@@ -28,7 +28,7 @@ def train_model(args, progress_callback=None, stop_flag=None):
             unique_dir = f'train/{dir}_{count}'
 
         os.makedirs(unique_dir, exist_ok=True)
-        np.save(f'{unique_dir}/params.npy', vars(args))
+        np.savez(f'{unique_dir}/params.npz', **args)
 
     dataset = RamanSpectra(args['spectra_dir'], args['label_dir'], args['spectra_interval'], args['seed'],
                            args['shuffle'], num_workers=2, batch_size=args['batch_size'])
