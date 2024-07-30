@@ -14,7 +14,7 @@ const generalConfig = {
   seed: { type: 'number', default: 42, min: 0, max: 9999 },
   shuffle: { type: 'boolean', default: true },
   save: { type: 'boolean', default: false },
-  spectra_interval: { type: 'text', default: '400,100' },
+  spectra_interval: { type: 'text', default: '100' },
   train_split: { type: 'number', default: 0.7, min: 0.1, max: 0.9, step: 0.01 },
   test_split: { type: 'number', default: 0.15, min: 0.1, max: 0.9, step: 0.01 },
 };
@@ -116,7 +116,6 @@ const Train = ({
   const handleColabURLSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Verify the URL is accessible
       await axios.get(`${colabURL}/health-check`);
       setBackendURL(colabURL);
       setIsUsingColab(true);
@@ -299,11 +298,13 @@ const Train = ({
 
   return (
     <div className="train-container">
-      <div className="backend-selector">
+      <div className="sidebar">
+        <h3>Training Input</h3>
+        <div className="backend-selector">
         {isUsingColab ? (
           <div>
-            <p>Connected to Colab: {backendURL}</p>
-            <button onClick={handleSwitchToLocal}>Switch to Local Backend</button>
+            <label>Connected to Colab: {backendURL}</label>
+            <button onClick={handleSwitchToLocal} className="backend" >Switch to Local Backend</button>
           </div>
         ) : (
           <form onSubmit={handleColabURLSubmit}>
@@ -314,12 +315,10 @@ const Train = ({
               placeholder="Enter Colab backend URL"
               required
             />
-            <button type="submit">Connect to Colab</button>
+            <button type="submit" className="backend" >Connect to Colab</button>
           </form>
         )}
       </div>
-      <div className="sidebar">
-        <h3>Training Input</h3>
         <form onSubmit={handleTrainSubmit}>
           <div className="input-group">
             <label>Model:</label>
@@ -357,12 +356,6 @@ const Train = ({
           )}
         </form>
         {trainingStatus && <p className="status-message">{trainingStatus}</p>}
-        {isTraining && (
-          <div className="training-progress-container">
-            <div className="training-progress-bar" style={{ width: `${trainingProgress}%` }}></div>
-            <div className="training-progress-text">{`Training Progress: ${Math.round(trainingProgress)}%`}</div>
-          </div>
-        )}
         {errorDetails && (
           <div className="error-message">
             <h3>Error</h3>

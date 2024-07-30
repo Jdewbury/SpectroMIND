@@ -10,7 +10,7 @@ const FileItem = ({ file, isSelected, onSelect, onDelete }) => {
         {file}
       </button>
       {isSelected && (
-        <xbutton
+        <button
           className="delete-button"
           onClick={(e) => {
             e.stopPropagation();
@@ -18,7 +18,7 @@ const FileItem = ({ file, isSelected, onSelect, onDelete }) => {
           }}
         >
           x
-        </xbutton>
+        </button>
       )}
     </div>
   );

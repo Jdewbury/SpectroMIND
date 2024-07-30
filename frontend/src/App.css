@@ -154,6 +154,7 @@ h3 {
 .file-item {
   display: flex;
   align-items: center;
+  margin-right: 5px 0;
 }
 
 .file-item button {
@@ -172,19 +173,20 @@ h3 {
   width: 100px;
 }
 
-.file-item xbutton {
+.file-item .delete-button {
   cursor: pointer;
   padding: 5px 10px;
   font-size: 12px;
-  width: 10px;
+  width: 20px;
   flex-shrink: 0; 
-  text-align: center; 
+  text-align: left; 
   margin-left: -12px; 
+  flex: 0;
   color: red;
   background: #6eb1f8;
 }
 
-.file-item xbutton:hover {
+.file-item .delete-button:hover {
   color: #333333;
   background: #6eb1f8;
 }
@@ -499,7 +501,26 @@ label {
   word-break: break-all;
 }
 
-.sidebar button {
-  margin-right: 10px;
+button.backend {
+  color: #6eb1f8;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  border: none;
+  background: none;
+  margin-left: -15px;
+  margin-bottom: 15px;
 }
+
+.backend-selector input {
+  font-size: 12px;
+  color:#333333;
+}
+
+.backend-selector form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
 
