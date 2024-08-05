@@ -9,11 +9,11 @@ from utils.log import Log
 from utils.initialize import get_optimizer, get_scheduler
 from utils.bypass_bn import enable_running_stats, disable_running_stats
 
-from model.resnet_1d import ResNet
-from model.mlp_flip import MLPMixer1D_flip
 from dataset import RamanSpectra
 
 import sys; sys.path.append("..")
+
+from train_config import MODELS, MODEL_CONFIG, OPTIMIZERS, OPTIMIZER_CONFIG, GENERAL_CONFIG, SCHEDULER_CONFIG
 
 def train_model(args, progress_callback=None, stop_flag=None):
     dir = f"{args['optimizer']}{'_' + args['base_optimizer'] if args['optimizer'] in ['SAM', 'ASAM'] else ''}_{args['seed']}"
@@ -34,18 +34,9 @@ def train_model(args, progress_callback=None, stop_flag=None):
                            args['shuffle'], num_workers=2, batch_size=args['batch_size'])
     log = Log(log_each=10)
 
-    if args['model'] == 'resnet':
-        hidden_sizes = [args['hidden_size']] * args['layers']
-        num_blocks = [args['block_size']] * args['layers']
-        model = ResNet(hidden_sizes, num_blocks, input_dim=args['input_dim'],
-                       in_channels=args['in_channels'], num_classes=args['num_classes'], activation=args['activation'])
-    elif args['model'] == 'mlp_flip':
-        model = MLPMixer1D_flip(in_channels=args['in_channels'], input_dim=args['input_dim'],
-                                num_classes=args['num_classes'], depth=args['depth'],
-                                token_dim=args['token_dim'], channel_dim=args['channel_dim'],
-                                patch_size=args['patch_size'])
-    else:
-        raise ValueError(f"Unknown model type: {args['model']}")
+    # Use the MODELS dictionary to create the model
+    model_creator = MODELS[args['model']]
+    model = model_creator(args)
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
@@ -53,7 +44,7 @@ def train_model(args, progress_callback=None, stop_flag=None):
     criterion = smooth_crossentropy
 
     optimizer, base_optimizer = get_optimizer(model, args['optimizer'], args['learning_rate'], args['base_optimizer'],
-                                              args['rho'], args['weight_decay'])
+                                              args.get('rho', 0.05), args['weight_decay'])
 
     scheduler_optimizer = optimizer.base_optimizer if args['optimizer'] in ['SAM', 'ASAM'] else optimizer
     scheduler = get_scheduler(args['scheduler'], scheduler_optimizer, args['epochs'], args['lr_step'])
@@ -188,45 +179,39 @@ def train_model(args, progress_callback=None, stop_flag=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, choices=['resnet', 'mlp_flip'], help='Model architecture to use.')
-    parser.add_argument('--epochs', default=200, type=int, help='Total number of epochs.')
-    parser.add_argument('--spectra_dir', nargs='+', default=['data/spectral_data/X_2018clinical.npy', 'data/spectral_data/X_2019clinical.npy'], help='Directory to spectra.')
-    parser.add_argument('--label_dir', nargs='+', default=['data/spectral_data/y_2018clinical.npy', 'data/spectral_data/y_2019clinical.npy'], help='Directory to labels.')
-    parser.add_argument('--spectra_interval', nargs='+', type=int, default=[400, 100], help='Specified patient intervals for clinical significance.')
-    parser.add_argument('--weight_dir', default='models', type=str, help='Directory containing model weight(s).')
-    parser.add_argument('--batch_size', default=16, type=int, help='Batch size for the training and validation loops.')
-    parser.add_argument('--learning_rate', default=0.001, type=float, help='Learning rate for the optimizer.')
-    parser.add_argument('--in_channels', default=64, type=int, help='Number of input channels.')
-    parser.add_argument('--num_classes', default=5, type=int, help='Number of classes in the classification task.')
-    parser.add_argument('--input_dim', default=1000, type=int, help='Input dimension for the model.')
-    parser.add_argument('--rho', default=0.05, type=float, help='Rho value for the optimizer.')
-    parser.add_argument('--momentum', default=0.9, type=float, help='Momentum value for the optimizer.')
-    parser.add_argument('--weight_decay', default=0.0005, type=float, help='Weight decay value for the optimizer.')
-    parser.add_argument('--label_smoothing', default=0.1, type=float, help='Use 0.0 for no label smoothing.')
-    parser.add_argument('--optimizer', default='SAM', type=str, choices=['SAM','ASAM','Adam', 'SGD'], help='Optimizer to be used.')
-    parser.add_argument('--base_optimizer', default='SGD', type=str, choices=['Adam', 'SGD'], help='Base optimizer to be used.')
-    parser.add_argument('--scheduler', default='step', type=str, choices=['step', 'cosine'], help='Learning rate scheduler to be used.')
-    parser.add_argument('--lr_step', default=0.2, type=float, help='Step size for learning rate scheduler.')
-    parser.add_argument('--seed', default=42, type=int, help='Initialization seed.')
-    parser.add_argument('--shuffle', default=True, type=bool, help='Shuffle training set.')
-    parser.add_argument('--save', action='store_true', help='Save results.')
-    parser.add_argument('--train_split', default=0.7, type=float, help='Proportion of data to use for training.')
-    parser.add_argument('--test_split', default=0.15, type=float, help='Proportion of data to use for testing.')
+    
+    # Add arguments based on GENERAL_CONFIG
+    for key, config in GENERAL_CONFIG.items():
+        parser.add_argument(f'--{key}', default=config['default'], type=eval(config['type']), help=f'{key} parameter')
 
-    # ResNet specific arguments
-    parser.add_argument('--layers', default=6, type=int, help='Number of layers in ResNet.')
-    parser.add_argument('--hidden_size', default=100, type=int, help='Hidden size in ResNet.')
-    parser.add_argument('--block_size', default=2, type=int, help='Block size in ResNet.')
-    parser.add_argument('--activation', default='selu', type=str, choices=['relu', 'selu', 'gelu'], help='Activation function in ResNet.')
+    # Add model and optimizer arguments
+    parser.add_argument('--model', type=str, choices=list(MODELS.keys()), help='Model architecture to use.')
+    parser.add_argument('--optimizer', type=str, choices=list(OPTIMIZERS.keys()), help='Optimizer to be used.')
 
-    # MLP Flip specific arguments
-    parser.add_argument('--depth', default=2, type=int, help='Depth of MLP Flip.')
-    parser.add_argument('--token_dim', default=64, type=int, help='Token dimension in MLP Flip.')
-    parser.add_argument('--channel_dim', default=16, type=int, help='Channel dimension in MLP Flip.')
-    parser.add_argument('--patch_size', default=50, type=int, help='Patch size in MLP Flip.')
-
+    # Parse arguments
     args = parser.parse_args()
-    scores, save_dir = train_model(args)
+
+    # Convert args to dictionary
+    args_dict = vars(args)
+
+    # Add model-specific parameters
+    if args.model in MODEL_CONFIG:
+        for key, config in MODEL_CONFIG[args.model].items():
+            if key not in args_dict:
+                args_dict[key] = config['default']
+
+    # Add optimizer-specific parameters
+    if args.optimizer in OPTIMIZER_CONFIG:
+        for key, config in OPTIMIZER_CONFIG[args.optimizer].items():
+            if key not in args_dict:
+                args_dict[key] = config['default']
+
+    # Add scheduler parameters
+    for key, config in SCHEDULER_CONFIG.items():
+        if key not in args_dict:
+            args_dict[key] = config['default']
+
+    scores, save_dir = train_model(args_dict)
     print(f"Training completed. Scores: {scores}")
     if save_dir:
         print(f"Results saved in: {save_dir}")

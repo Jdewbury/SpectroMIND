@@ -3,61 +3,6 @@ import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:5000';
 
-const generalConfig = {
-  epochs: { type: 'number', default: 200, min: 1, max: 1000 },
-  batch_size: { type: 'number', default: 16, min: 1, max: 256 },
-  learning_rate: { type: 'number', default: 0.001, min: 0.0001, max: 0.1, step: 0.0001 },
-  in_channels: { type: 'number', default: 64, min: 1, max: 256 },
-  num_classes: { type: 'number', default: 5, min: 2, max: 1000 },
-  input_dim: { type: 'number', default: 1000, min: 100, max: 10000 },
-  label_smoothing: { type: 'number', default: 0.1, min: 0, max: 1, step: 0.01 },
-  seed: { type: 'number', default: 42, min: 0, max: 9999 },
-  shuffle: { type: 'boolean', default: true },
-  save: { type: 'boolean', default: false },
-  spectra_interval: { type: 'text', default: '100' },
-  train_split: { type: 'number', default: 0.7, min: 0.1, max: 0.9, step: 0.01 },
-  test_split: { type: 'number', default: 0.15, min: 0.1, max: 0.9, step: 0.01 },
-};
-
-const modelConfig = {
-  resnet: {
-    layers: { type: 'number', default: 6, min: 1, max: 50 },
-    hidden_size: { type: 'number', default: 100, min: 32, max: 1024 },
-    block_size: { type: 'number', default: 2, min: 1, max: 8 },
-    activation: { type: 'select', options: ['relu', 'selu', 'gelu'] },
-  },
-  mlp_flip: {
-    depth: { type: 'number', default: 2, min: 1, max: 10 },
-    token_dim: { type: 'number', default: 64, min: 16, max: 256 },
-    channel_dim: { type: 'number', default: 16, min: 8, max: 128 },
-    patch_size: { type: 'number', default: 50, min: 10, max: 100 },
-  },
-};
-
-const optimizerConfig = {
-  Adam: {
-    weight_decay: { type: 'number', default: 0.0005, min: 0, max: 0.1, step: 0.0001 },
-  },
-  SGD: {
-    momentum: { type: 'number', default: 0.9, min: 0, max: 1, step: 0.1 },
-    weight_decay: { type: 'number', default: 0.0005, min: 0, max: 0.1, step: 0.0001 },
-  },
-  SAM: {
-    base_optimizer: { type: 'select', options: ['SGD', 'Adam'] },
-    rho: { type: 'number', default: 0.05, min: 0.01, max: 0.1, step: 0.01 },
-  },
-  ASAM: {
-    base_optimizer: { type: 'select', options: ['SGD', 'Adam'] },
-    rho: { type: 'number', default: 0.05, min: 0.01, max: 0.1, step: 0.01 },
-  },
-};
-
-const schedulerConfig = {
-  type: 'select',
-  options: ['step', 'cosine'],
-  default: 'step',
-};
-
 const Train = ({ 
   isTraining, 
   setIsTraining, 
@@ -79,15 +24,44 @@ const Train = ({
   const [backendURL, setBackendURL] = useState(API_BASE_URL);
   const [colabURL, setColabURL] = useState('');
   const [isUsingColab, setIsUsingColab] = useState(false);
+  const [config, setConfig] = useState({});
+
+  useEffect(() => {
+    fetchConfig();
+  }, [backendURL]);
+
+  const fetchConfig = async () => {
+    try {
+      const response = await axios.get(`${backendURL}/get-train-config`);
+      setConfig(response.data);
+    } catch (error) {
+      console.error('Error fetching train config:', error);
+      setErrorDetails('Failed to fetch training configuration. Please try again.');
+    }
+  };
 
   const handleModelChange = (e) => {
-    setModel(e.target.value);
-    setParameters({});
+    const selectedModel = e.target.value;
+    setModel(selectedModel);
+    setParameters(prevParams => {
+      const newParams = { ...prevParams };
+      Object.keys(config.MODEL_CONFIG[selectedModel] || {}).forEach(key => {
+        newParams[key] = config.MODEL_CONFIG[selectedModel][key].default;
+      });
+      return newParams;
+    });
   };
 
   const handleOptimizerChange = (e) => {
-    setOptimizer(e.target.value);
-    setParameters({});
+    const selectedOptimizer = e.target.value;
+    setOptimizer(selectedOptimizer);
+    setParameters(prevParams => {
+      const newParams = { ...prevParams };
+      Object.keys(config.OPTIMIZER_CONFIG[selectedOptimizer] || {}).forEach(key => {
+        newParams[key] = config.OPTIMIZER_CONFIG[selectedOptimizer][key].default;
+      });
+      return newParams;
+    });
   };
 
   const handleParameterChange = (paramName, value) => {
@@ -119,6 +93,7 @@ const Train = ({
       await axios.get(`${colabURL}/health-check`);
       setBackendURL(colabURL);
       setIsUsingColab(true);
+      fetchConfig();
     } catch (error) {
       console.error('Error connecting to Colab URL:', error);
       alert('Failed to connect to the provided Colab URL. Please check the URL and try again.');
@@ -128,6 +103,7 @@ const Train = ({
   const handleSwitchToLocal = () => {
     setBackendURL(API_BASE_URL);
     setIsUsingColab(false);
+    fetchConfig();
   };
 
   const handleTrainSubmit = async (e) => {
@@ -150,19 +126,19 @@ const Train = ({
     setTrainingProgress(0);
 
     const allParams = {
-      ...Object.keys(generalConfig).reduce((acc, key) => {
-        acc[key] = parameters[key] !== undefined ? parameters[key] : generalConfig[key].default;
+      ...Object.keys(config.GENERAL_CONFIG).reduce((acc, key) => {
+        acc[key] = parameters[key] !== undefined ? parameters[key] : config.GENERAL_CONFIG[key].default;
         return acc;
       }, {}),
-      ...(modelConfig[model] ? Object.keys(modelConfig[model]).reduce((acc, key) => {
-        acc[key] = parameters[key] !== undefined ? parameters[key] : modelConfig[model][key].default;
+      ...(config.MODEL_CONFIG[model] ? Object.keys(config.MODEL_CONFIG[model]).reduce((acc, key) => {
+        acc[key] = parameters[key] !== undefined ? parameters[key] : config.MODEL_CONFIG[model][key].default;
         return acc;
       }, {}) : {}),
-      ...(optimizerConfig[optimizer] ? Object.keys(optimizerConfig[optimizer]).reduce((acc, key) => {
-        acc[key] = parameters[key] !== undefined ? parameters[key] : optimizerConfig[optimizer][key].default;
+      ...(config.OPTIMIZER_CONFIG[optimizer] ? Object.keys(config.OPTIMIZER_CONFIG[optimizer]).reduce((acc, key) => {
+        acc[key] = parameters[key] !== undefined ? parameters[key] : config.OPTIMIZER_CONFIG[optimizer][key].default;
         return acc;
       }, {}) : {}),
-      scheduler: parameters.scheduler || schedulerConfig.default,
+      scheduler: parameters.scheduler || config.SCHEDULER_CONFIG.type.default,
     };
 
     const formData = new FormData();
@@ -255,18 +231,18 @@ const Train = ({
     }
   };
 
-  const renderParameterInputs = (config) => {
-    return Object.entries(config).map(([paramName, paramConfig]) => (
+  const renderParameterInputs = (configSection) => {
+    return Object.entries(configSection).map(([paramName, paramConfig]) => (
       <div key={paramName} className="parameter-input">
         <label>{paramName}:</label>
-        {paramConfig.type === 'number' ? (
+        {paramConfig.type === 'int' || paramConfig.type === 'float' ? (
           <input
             type="number"
             value={parameters[paramName] !== undefined ? parameters[paramName] : paramConfig.default}
-            onChange={(e) => handleParameterChange(paramName, parseFloat(e.target.value))}
+            onChange={(e) => handleParameterChange(paramName, paramConfig.type === 'int' ? parseInt(e.target.value) : parseFloat(e.target.value))}
             min={paramConfig.min}
             max={paramConfig.max}
-            step={paramConfig.step || 1}
+            step={paramConfig.step || (paramConfig.type === 'int' ? 1 : 0.01)}
           />
         ) : paramConfig.type === 'select' ? (
           <select
@@ -319,23 +295,23 @@ const Train = ({
           </form>
         )}
       </div>
-        <form onSubmit={handleTrainSubmit}>
+      <form onSubmit={handleTrainSubmit}>
           <div className="input-group">
             <label>Model:</label>
             <select value={model} onChange={handleModelChange}>
               <option value="">Select a model</option>
-              <option value="resnet">ResNet</option>
-              <option value="mlp_flip">MLP Flip</option>
+              {Object.keys(config.MODEL_CONFIG || {}).map(modelName => (
+                <option key={modelName} value={modelName}>{modelName}</option>
+              ))}
             </select>
           </div>
           <div className="input-group">
             <label>Optimizer:</label>
             <select value={optimizer} onChange={handleOptimizerChange}>
               <option value="">Select an optimizer</option>
-              <option value="Adam">Adam</option>
-              <option value="SGD">SGD</option>
-              <option value="SAM">SAM</option>
-              <option value="ASAM">ASAM</option>
+              {Object.keys(config.OPTIMIZER_CONFIG || {}).map(optimizerName => (
+                <option key={optimizerName} value={optimizerName}>{optimizerName}</option>
+              ))}
             </select>
           </div>
           <div className="input-group">
@@ -395,28 +371,28 @@ const Train = ({
           )}
         </div>
         <div className="parameter-content">
-          {activeTab === 'general' && (
+          {activeTab === 'general' && config.GENERAL_CONFIG && (
             <div>
               <h3>General Parameters</h3>
-              {renderParameterInputs(generalConfig)}
+              {renderParameterInputs(config.GENERAL_CONFIG)}
             </div>
           )}
-          {activeTab === 'scheduler' && (
+          {activeTab === 'scheduler' && config.SCHEDULER_CONFIG && (
             <div>
               <h3>Scheduler</h3>
-              {renderParameterInputs({scheduler: schedulerConfig})}
+              {renderParameterInputs(config.SCHEDULER_CONFIG)}
             </div>
           )}
-          {activeTab === 'model' && model && (
+          {activeTab === 'model' && model && config.MODEL_CONFIG && config.MODEL_CONFIG[model] && (
             <div>
               <h3>{model} Parameters</h3>
-              {renderParameterInputs(modelConfig[model])}
+              {renderParameterInputs(config.MODEL_CONFIG[model])}
             </div>
           )}
-          {activeTab === 'optimizer' && optimizer && (
+          {activeTab === 'optimizer' && optimizer && config.OPTIMIZER_CONFIG && config.OPTIMIZER_CONFIG[optimizer] &&(
             <div>
               <h3>{optimizer} Parameters</h3>
-              {renderParameterInputs(optimizerConfig[optimizer])}
+              {renderParameterInputs(config.OPTIMIZER_CONFIG[optimizer])}
             </div>
           )}
         </div>

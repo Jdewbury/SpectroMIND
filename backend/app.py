@@ -17,7 +17,9 @@ from sklearn import metrics
 import json
 from train import train_model
 from flask import Response
-from filters import FILTERS, FILTER_CONFIG
+
+from backend.filter_config import FILTERS, FILTER_CONFIG
+from backend.train_config import MODELS, MODEL_CONFIG, OPTIMIZERS, OPTIMIZER_CONFIG, GENERAL_CONFIG, SCHEDULER_CONFIG
 
 app = Flask(__name__)
 CORS(app)
@@ -180,6 +182,16 @@ def save_filtered_data():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/get-train-config', methods=['GET'])
+def get_train_config():
+    config = {
+        'MODEL_CONFIG': MODEL_CONFIG,
+        'OPTIMIZER_CONFIG': OPTIMIZER_CONFIG,
+        'GENERAL_CONFIG': GENERAL_CONFIG,
+        'SCHEDULER_CONFIG': SCHEDULER_CONFIG
+    }
+    return jsonify(config)
+
 @app.route('/api/stop-training', methods=['POST'])
 def stop_training():
     global stop_training_flag
@@ -229,44 +241,25 @@ def handle_train():
         print(f"Label dirs: {label_dirs}")
 
         # Prepare arguments for train_model function
-        args = {
-            'model': model_name,
-            'spectra_dir': spectra_dirs,
-            'label_dir': label_dirs,
-            'optimizer': optimizer_name,
-            'epochs': int(parameters.get('epochs', 200)),
-            'batch_size': int(parameters.get('batch_size', 16)),
-            'learning_rate': float(parameters.get('learning_rate', 0.001)),
-            'in_channels': int(parameters.get('in_channels', 64)),
-            'num_classes': int(parameters.get('num_classes', 5)),
-            'input_dim': int(parameters.get('input_dim', 1000)),
-            'label_smoothing': float(parameters.get('label_smoothing', 0.1)),
-            'seed': int(parameters.get('seed', 42)),
-            'shuffle': bool(parameters.get('shuffle', True)),
-            'save': bool(parameters.get('save', False)),
-            'spectra_interval': [int(i) for i in parameters.get('spectra_interval', '400,100').split(',')],
-            'train_split': float(parameters.get('train_split', 0.7)),
-            'test_split': float(parameters.get('test_split', 0.15)),
-        }
+        args = {key: parameters.get(key, config['default']) for key, config in GENERAL_CONFIG.items()}
+        args['spectra_dir'] = spectra_dirs
+        args['label_dir'] = label_dirs
+        args['model'] = model_name
+        args['optimizer'] = optimizer_name
 
         # Add model-specific parameters
-        if model_name == 'resnet':
-            args['layers'] = int(parameters.get('layers', 6))
-            args['hidden_size'] = int(parameters.get('hidden_size', 100))
-            args['block_size'] = int(parameters.get('block_size', 2))
-            args['activation'] = parameters.get('activation', 'selu')
-        elif model_name == 'mlp_flip':
-            args['depth'] = int(parameters.get('depth', 2))
-            args['token_dim'] = int(parameters.get('token_dim', 64))
-            args['channel_dim'] = int(parameters.get('channel_dim', 16))
-            args['patch_size'] = int(parameters.get('patch_size', 50))
+        if model_name in MODEL_CONFIG:
+            for key, config in MODEL_CONFIG[model_name].items():
+                args[key] = parameters.get(key, config['default'])
 
-        args['base_optimizer'] = parameters.get('base_optimizer', 'SGD')
-        args['rho'] = float(parameters.get('rho', 0.05))
-        args['momentum'] = float(parameters.get('momentum', 0.9))
-        args['weight_decay'] = float(parameters.get('weight_decay', 0.0005))
-        args['scheduler'] = parameters.get('scheduler', 'step')
-        args['lr_step'] = float(parameters.get('lr_step', 0.2))
+        # Add optimizer-specific parameters
+        if optimizer_name in OPTIMIZER_CONFIG:
+            for key, config in OPTIMIZER_CONFIG[optimizer_name].items():
+                args[key] = parameters.get(key, config['default'])
+
+        # Add scheduler parameters
+        for key, config in SCHEDULER_CONFIG.items():
+            args[key] = parameters.get(key, config['default'])
 
         print("Starting training process...")
 
