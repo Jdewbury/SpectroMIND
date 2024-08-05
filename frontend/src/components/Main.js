@@ -3,7 +3,7 @@ import Preprocess from './Preprocess';
 import Train from './Train';
 import Evaluate from './Evaluate';
 
-const RamanML = () => {
+const Main = () => {
   const [activeTab, setActiveTab] = useState('preprocess');
   const [isTraining, setIsTraining] = useState(false);
   const [trainingStatus, setTrainingStatus] = useState('');
@@ -61,6 +61,6 @@ const RamanML = () => {
   );
 };
 
-export default RamanML;
+export default Main;
 
 

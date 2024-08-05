@@ -44,6 +44,7 @@ html, body {
   border-radius: 2px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   height: 95%;
+  box-sizing: border-box;
 }
 
 .title {
@@ -80,6 +81,8 @@ h3 {
   cursor: pointer;
   transition: background-color 0.3s;
   font-size: 12px;
+  height: 30px;
+  line-height: 10px;
 }
 
 .tab-button.active {
@@ -89,10 +92,12 @@ h3 {
 .preprocess-container {
   display: flex;
   gap: 20px;
+  flex-wrap: wrap;
 }
 
 .main-content {
-  flex: 3;
+  flex: 1 1 300px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -106,6 +111,8 @@ h3 {
   border-color: #d5d5d5;
   border-width: 1px;
   height: 300px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .placeholder {
@@ -123,23 +130,25 @@ h3 {
   border-style: solid;
   border-color: #d5d5d5;
   border-width: 1px;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
-.filter-options {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 15px;
-  font-size: 13px;
+.filter-options-container {
+  height: 70px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
 }
 
-.filter-actions {
-  display: flex;
-  justify-content: space-between;
+.filter-options-content {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  height: 100%;
 }
 
 .sidebar {
-  flex: 1;
+  flex: 0 0 200px;
   background-color: white;
   border-radius: 2px;
   padding: 20px;
@@ -148,7 +157,7 @@ h3 {
   border-width: 1px;
   display: flex;
   flex-direction: column;
-  max-width: 200px;
+  box-sizing: border-box;
 }
 
 .file-item {
@@ -265,6 +274,8 @@ button {
   transition: background-color 0.3s;
   font-size: 12px;
   font-family: 'AnonymousPro', Arial, sans-serif;
+  height: 30px;
+  line-height: 20px;
 }
 
 button:hover {
@@ -322,6 +333,10 @@ input[type="file"] {
 .input-group label {
   display: block;
   margin-bottom: 5px;
+}
+
+.train-container button {
+  margin-bottom: 10px;
 }
 
 .input-group input {
@@ -524,3 +539,131 @@ button.backend {
 }
 
 
+.filter-tabs {
+  display: flex;
+  border-bottom: 2px solid #ccc;
+  margin-bottom: 20px;
+  font-size: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.filter-tabs::-webkit-scrollbar {
+  height: 3px;
+}
+
+.filter-tabs::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.filter-tabs::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.filter-tabs::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.filter-tab {
+  padding: 10px 20px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-bottom: none;
+  margin-bottom: -1px;
+  background: none;
+  font-size: inherit;
+  color: #333333;
+  line-height: 10px;
+}
+
+.filter-tab.active {
+  background-color: #fff;
+  border-color: #ccc;
+  border-bottom-color: #fff;
+  color: #333333;
+}
+
+.filter-content {
+  margin-top: -20px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-top: none;
+  font-size: 13px;
+}
+
+.filter-column {
+  display: flex;
+  flex-direction: column;
+  margin-right: 20px;
+}
+
+.filter-option {
+  display: flex;
+  align-items: center;
+  margin: 5px 0;
+  white-space: nowrap;
+}
+
+.filter-option input[type="checkbox"] {
+  margin-right: 5px;
+}
+
+.wavenumber-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wavenumber-fields {
+  display: flex;
+  gap: 15px;
+}
+
+.filter-inputs {
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  white-space: nowrap;
+  margin-left: 10px;
+  margin-top: 5px;
+  color: #6eb1f8;
+  font-weight: bold;
+}
+
+.filter-inputs input{
+  color: #6eb1f8;
+  font-weight: bold;
+}
+
+.filter-actions {
+  margin-top: 15px;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+}
+
+.filter-actions input {
+  flex-grow: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  height: 12px; 
+}
+
+.filter-options-container::-webkit-scrollbar {
+  height: 5px;
+}
+
+.filter-options-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.filter-options-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.filter-options-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

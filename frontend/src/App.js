@@ -1,5 +1,5 @@
 import React from 'react';
-import RamanML from './components/RamanML';
+import Main from './components/Main';
 import './App.css';
 
 function App() {
@@ -7,7 +7,7 @@ function App() {
     <div className="app">
       <div className="container">
         <h1 className="title">SpectroMIND</h1>
-        <RamanML />
+        <Main />
       </div>
     </div>
   );

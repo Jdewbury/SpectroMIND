@@ -17,6 +17,7 @@ from sklearn import metrics
 import json
 from train import train_model
 from flask import Response
+from filters import FILTERS, FILTER_CONFIG
 
 app = Flask(__name__)
 CORS(app)
@@ -113,6 +114,42 @@ def directory_structure():
         return jsonify({'structure': structure})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+@app.route('/get-filters', methods=['GET'])
+def get_filters():
+    return jsonify(list(FILTERS.keys()))
+
+@app.route('/get-filter-options', methods=['GET'])
+def get_filter_options():
+    category = request.args.get('category')
+    if category in FILTERS:
+        return jsonify(list(FILTERS[category].keys()))
+    return jsonify([])
+
+@app.route('/get-filter-config', methods=['GET'])
+def get_filter_config():
+    return jsonify(FILTER_CONFIG)
+
+@app.route('/apply-filters', methods=['POST'])
+def apply_filters():
+    data = request.json
+    input_data = np.array(data['data'])
+    applied_filters = data['filters']
+    filter_inputs = data.get('filterInputs', {})
+
+    try:
+        for filter_name in applied_filters:
+            for category, filters in FILTERS.items():
+                if filter_name in filters:
+                    filter_function = filters[filter_name]
+                    filter_params = filter_inputs.get(filter_name, {})
+                    input_data = filter_function(input_data, **filter_params)
+                    break
+        return jsonify({'filtered_data': input_data.tolist()})
+    except Exception as e:
+        error_message = f"Error applying filter '{filter_name}': {str(e)}"
+        print(error_message)
+        return jsonify({'error': error_message}), 500
 
 @app.route('/save-filtered-data', methods=['POST'])
 def save_filtered_data():

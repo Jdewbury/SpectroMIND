@@ -409,7 +409,7 @@ const Train = ({
           )}
           {activeTab === 'model' && model && (
             <div>
-              <h3>{model.toUpperCase()} Parameters</h3>
+              <h3>{model} Parameters</h3>
               {renderParameterInputs(modelConfig[model])}
             </div>
           )}

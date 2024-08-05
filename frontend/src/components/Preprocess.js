@@ -5,21 +5,6 @@ import FileItem from './FileItem';
 
 const API_BASE_URL = 'http://localhost:5000';
 
-const filterFunctions = {
-  minMax: (data) => {
-    const min = Math.min(...data);
-    const max = Math.max(...data);
-    return data.map(value => (value - min) / (max - min));
-  },
-  rayRemoval1: (data) => {
-    return data.map(value => value > 1000 ? 1000 : value);
-  },
-  rayRemoval2: (data) => {
-    return data.map(value => value < 0 ? 0 : value);
-  },
-  // Add more filter functions here
-};
-
 const Preprocess = () => {
   const [files, setFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState('');
@@ -35,6 +20,11 @@ const Preprocess = () => {
   const [outputFolder, setOutputFolder] = useState('');
   const [minWavenumber, setMinWavenumber] = useState('');
   const [maxWavenumber, setMaxWavenumber] = useState('');
+  const [activeFilterTab, setActiveFilterTab] = useState('normalization');
+  const [filterCategories, setFilterCategories] = useState([]);
+  const [filterOptions, setFilterOptions] = useState({});
+  const [filterInputs, setFilterInputs] = useState({});
+  const [filterConfig, setFilterConfig] = useState({});
 
   const fetchDirectoryStructure = async () => {
     let isMounted = true;
@@ -60,6 +50,8 @@ const Preprocess = () => {
 
   useEffect(() => {
     fetchDirectoryStructure();
+    fetchFilterCategories();
+    fetchFilterConfig();
   }, []);
 
   const handleFileSelect = async (file) => {
@@ -75,6 +67,101 @@ const Preprocess = () => {
     }
   };
 
+  const fetchFilterCategories = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/get-filters`);
+      setFilterCategories(response.data);
+      fetchFilterOptions(response.data);
+    } catch (error) {
+      console.error('Error fetching filter categories:', error);
+      setError('Failed to fetch filter categories. Please try again.');
+    }
+  };
+
+  const renderFilterOptions = () => {
+    const options = filterOptions[activeFilterTab] || [];
+    const optionsPerColumn = 2; // Adjust this number to change the number of options per column
+
+    return (
+      <div className="filter-options-container">
+        <div className="filter-options-content">
+          {Array.from({ length: Math.ceil(options.length / optionsPerColumn) }, (_, columnIndex) => (
+            <div key={columnIndex} className="filter-column">
+              {options.slice(columnIndex * optionsPerColumn, (columnIndex + 1) * optionsPerColumn).map(filterName => (
+                <div key={filterName} className="filter-option">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={activeFilters[filterName] || false}
+                      onChange={() => handleFilterChange(filterName)}
+                    />
+                    {filterName}
+                  </label>
+                  {activeFilters[filterName] && filterConfig[filterName] && (
+                    <div className="filter-inputs">
+                      {Object.entries(filterConfig[filterName]).map(([inputName, inputConfig]) => (
+                        <div key={inputName}>
+                          <label>{inputConfig.label}:</label>
+                          <input
+                            type={inputConfig.type}
+                            value={filterInputs[filterName]?.[inputName] || inputConfig.default}
+                            onChange={(e) => handleFilterInputChange(filterName, inputName, e.target.value)}
+                            min={inputConfig.min}
+                            max={inputConfig.max}
+                            step={inputConfig.step}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderFilterTabs = () => {
+    return (
+      <div className="filter-tabs">
+        {filterCategories.map(category => (
+          <button
+            key={category}
+            className={`filter-tab ${activeFilterTab === category ? 'active' : ''}`}
+            onClick={() => setActiveFilterTab(category)}
+          >
+            {category.charAt(0).toUpperCase() + category.slice(1)}
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  const fetchFilterOptions = async (categories) => {
+    const options = {};
+    for (const category of categories) {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/get-filter-options?category=${category}`);
+        options[category] = response.data;
+      } catch (error) {
+        console.error(`Error fetching filter options for ${category}:`, error);
+      }
+    }
+    setFilterOptions(options);
+  };
+
+  const fetchFilterConfig = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/get-filter-config`);
+      setFilterConfig(response.data);
+    } catch (error) {
+      console.error('Error fetching filter config:', error);
+      setError('Failed to fetch filter configuration. Please try again.');
+    }
+  };
+
   const handleFilterChange = (filterName) => {
     setActiveFilters(prev => ({
       ...prev,
@@ -82,18 +169,39 @@ const Preprocess = () => {
     }));
   };
 
-  const applyFilters = () => {
-    if (!fileData) return;
-
-    let result = [...fileData];
-    Object.entries(activeFilters).forEach(([filterName, isActive]) => {
-      if (isActive && filterFunctions[filterName]) {
-        result = filterFunctions[filterName](result);
+  const handleFilterInputChange = (filterName, inputName, value) => {
+    setFilterInputs(prev => ({
+      ...prev,
+      [filterName]: {
+        ...prev[filterName],
+        [inputName]: value
       }
-    });
-    setFilteredData(result);
+    }));
   };
 
+  const applyFilters = async () => {
+    if (!fileData) return;
+  
+    try {
+      const response = await axios.post(`${API_BASE_URL}/apply-filters`, {
+        data: fileData,
+        filters: Object.keys(activeFilters).filter(filter => activeFilters[filter]),
+        filterInputs: Object.fromEntries(
+          Object.entries(filterInputs).map(([filter, inputs]) => [
+            filter,
+            Object.fromEntries(
+              Object.entries(inputs).map(([key, value]) => [key, Number(value)])
+            )
+          ])
+        )
+      });
+      setFilteredData(response.data.filtered_data);
+    } catch (error) {
+      console.error('Error applying filters:', error);
+      setTimedMessage(setError, `Failed to apply filters: ${error.response?.data?.error || 'Unknown error'}`, 5000);
+    }
+  };
+  
   const saveFilteredData = async () => {
     if (!filteredData || !selectedFile) return;
 
@@ -221,66 +329,42 @@ const Preprocess = () => {
   return (
     <div className="preprocess-container">
       <div className="main-content">
-      <div className="data-visualization">
-        {fileData || filteredData ? (
-          <ResponsiveContainer width="100%" height={300}>
+        <div className="data-visualization">
+          {fileData || filteredData ? (
+            <ResponsiveContainer width="100%" height={300}>
               <LineChart
                 data={(filteredData || fileData).map((y, index) => ({
                   x: Math.round(getWavenumberRange(fileData.length)[index]),
                   y
                 }))}
               >   
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="x" label={{ value: 'Wavenumber', position: 'insideBottomRight', offset: -5 }} tick={{ fontSize: 12 }}/>
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="y" stroke="#8884d8" dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="no-data">
-            <p>Please select file to visualize</p>
-          </div>
-        )}
-      </div>
-        <div className="wavenumber-inputs">
-          <h3>Wavenumber Range</h3>
-          <div className="wavenumber-fields">
-            <label>
-              Min Wavenumber:
-              <input
-                type="number"
-                value={minWavenumber}
-                onChange={(e) => setMinWavenumber(e.target.value)}
-                placeholder="min"
-              />
-            </label>
-            <label>
-              Max Wavenumber:
-              <input
-                type="number"
-                value={maxWavenumber}
-                onChange={(e) => setMaxWavenumber(e.target.value)}
-                placeholder="max"
-              />
-            </label>
-          </div>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="x" tick={{ fontSize: 12 }}/>
+                <YAxis 
+                  label={{ 
+                    value: 'Intensity', 
+                    angle: -90, 
+                    position: 'insideLeft', 
+                    offset: 0, 
+                    style: { textAnchor: 'middle' } 
+                  }} 
+                />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="y" stroke="#8884d8" dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="no-data">
+              <p>Please select file to visualize</p>
+            </div>
+          )}
         </div>
         <div className="filters">
           <h3>Filters</h3>
-          <div className="filter-options">
-            {Object.keys(filterFunctions).map(filterName => (
-              <label key={filterName}>
-                <input
-                  type="checkbox"
-                  checked={activeFilters[filterName] || false}
-                  onChange={() => handleFilterChange(filterName)}
-                  style={{ verticalAlign: 'middle', marginRight: '5px' }}
-                />
-                {filterName}
-              </label>
-            ))}
+          {renderFilterTabs()}
+          <div className="filter-content">
+            {renderFilterOptions()}
           </div>
           <div className="filter-actions">
             <button onClick={applyFilters}>Apply Filters</button>
