@@ -22,6 +22,22 @@ def create_mlp_flip(params):
         num_classes=params['num_classes']
     )
 
+GENERAL_CONFIG = {
+    'epochs': {'type': 'int', 'default': 200, 'min': 1, 'max': 1000},
+    'batch_size': {'type': 'int', 'default': 16, 'min': 1, 'max': 256},
+    'learning_rate': {'type': 'float', 'default': 0.001, 'min': 0.0001, 'max': 0.1, 'step': 0.0001},
+    'in_channels': {'type': 'int', 'default': 64, 'min': 1, 'max': 256},
+    'num_classes': {'type': 'int', 'default': 5, 'min': 2, 'max': 1000},
+    'input_dim': {'type': 'int', 'default': 1000, 'min': 100, 'max': 10000},
+    'label_smoothing': {'type': 'float', 'default': 0.1, 'min': 0, 'max': 1, 'step': 0.01},
+    'seed': {'type': 'int', 'default': 42, 'min': 0, 'max': 9999},
+    'shuffle': {'type': 'boolean', 'default': True},
+    'save': {'type': 'boolean', 'default': False},
+    'spectra_interval': {'type': 'text', 'default': '100'},
+    'train_split': {'type': 'float', 'default': 0.7, 'min': 0.1, 'max': 0.9, 'step': 0.01},
+    'test_split': {'type': 'float', 'default': 0.15, 'min': 0.1, 'max': 0.9, 'step': 0.01},
+}
+
 MODELS = {
     'resnet': create_resnet,
     'mlp_flip': create_mlp_flip,
@@ -60,22 +76,6 @@ OPTIMIZER_CONFIG = {
         'alpha': {'type': 'float', 'default': 0.99, 'min': 0, 'max': 1, 'step': 0.01},
         'weight_decay': {'type': 'float', 'default': 0.0005, 'min': 0, 'max': 0.1, 'step': 0.0001},
     },
-}
-
-GENERAL_CONFIG = {
-    'epochs': {'type': 'int', 'default': 200, 'min': 1, 'max': 1000},
-    'batch_size': {'type': 'int', 'default': 16, 'min': 1, 'max': 256},
-    'learning_rate': {'type': 'float', 'default': 0.001, 'min': 0.0001, 'max': 0.1, 'step': 0.0001},
-    'in_channels': {'type': 'int', 'default': 64, 'min': 1, 'max': 256},
-    'num_classes': {'type': 'int', 'default': 5, 'min': 2, 'max': 1000},
-    'input_dim': {'type': 'int', 'default': 1000, 'min': 100, 'max': 10000},
-    'label_smoothing': {'type': 'float', 'default': 0.1, 'min': 0, 'max': 1, 'step': 0.01},
-    'seed': {'type': 'int', 'default': 42, 'min': 0, 'max': 9999},
-    'shuffle': {'type': 'boolean', 'default': True},
-    'save': {'type': 'boolean', 'default': False},
-    'spectra_interval': {'type': 'text', 'default': '100'},
-    'train_split': {'type': 'float', 'default': 0.7, 'min': 0.1, 'max': 0.9, 'step': 0.01},
-    'test_split': {'type': 'float', 'default': 0.15, 'min': 0.1, 'max': 0.9, 'step': 0.01},
 }
 
 SCHEDULER_CONFIG = {

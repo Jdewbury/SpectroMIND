@@ -20,7 +20,7 @@ const Preprocess = () => {
   const [outputFolder, setOutputFolder] = useState('');
   const [minWavenumber, setMinWavenumber] = useState('');
   const [maxWavenumber, setMaxWavenumber] = useState('');
-  const [activeFilterTab, setActiveFilterTab] = useState('normalization');
+  const [activeFilterTab, setActiveFilterTab] = useState('');
   const [filterCategories, setFilterCategories] = useState([]);
   const [filterOptions, setFilterOptions] = useState({});
   const [filterInputs, setFilterInputs] = useState({});
@@ -71,6 +71,9 @@ const Preprocess = () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/get-filters`);
       setFilterCategories(response.data);
+      if (response.data.length > 0) {
+        setActiveFilterTab(response.data[0]);
+      }
       fetchFilterOptions(response.data);
     } catch (error) {
       console.error('Error fetching filter categories:', error);

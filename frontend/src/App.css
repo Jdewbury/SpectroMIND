@@ -464,6 +464,9 @@ input[type="file"] {
   border: 1px solid #ccc;
   border-top: none;
   font-size: 13px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 450px;
 }
 
 .train-container {
