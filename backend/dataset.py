@@ -9,6 +9,8 @@ class RamanSpectra:
 
         spectra_interval = [int(interval) for interval in spectra_interval]
 
+        print(spectra_interval)
+
         assert len(spectra_dir) == len(label_dir) == len(spectra_interval), 'Spectra, labels, and invervals do not align.'
         np.random.seed(seed)
 
@@ -31,7 +33,7 @@ class RamanSpectra:
 
             for i, l in enumerate(np.unique(y)):
                 X_type = X[y==l]
-                num_idxs = len(X_type) // interval
+                num_idxs = len(X_type) // int(interval)
                 split = np.arange(num_idxs)
                 np.random.shuffle(split)
 
