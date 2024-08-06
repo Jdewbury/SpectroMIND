@@ -363,10 +363,6 @@ def evaluate():
         dataset_paths = []
         label_paths = []
 
-        print("Saving files...")
-        params_file.save(params_path)
-        weights_file.save(weights_path)
-
         for dataset_file, label_file in zip(dataset_files, label_files):
             dataset_path = os.path.join(UPLOAD_FOLDER, secure_filename(dataset_file.filename))
             label_path = os.path.join(UPLOAD_FOLDER, secure_filename(label_file.filename))

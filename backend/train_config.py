@@ -33,7 +33,7 @@ GENERAL_CONFIG = {
     'seed': {'type': 'int', 'default': 42, 'min': 0, 'max': 9999},
     'shuffle': {'type': 'boolean', 'default': True},
     'save': {'type': 'boolean', 'default': False},
-    'spectra_interval': {'type': 'text', 'default': '100'},
+    'spectra_interval': {'type': 'text', 'default': ['100']},
     'train_split': {'type': 'float', 'default': 0.7, 'min': 0.1, 'max': 0.9, 'step': 0.01},
     'test_split': {'type': 'float', 'default': 0.15, 'min': 0.1, 'max': 0.9, 'step': 0.01},
 }
@@ -48,7 +48,7 @@ MODEL_CONFIG = {
         'layers': {'type': 'int', 'default': 6, 'min': 1, 'max': 50},
         'hidden_size': {'type': 'int', 'default': 100, 'min': 32, 'max': 1024},
         'block_size': {'type': 'int', 'default': 2, 'min': 1, 'max': 8},
-        'activation': {'type': 'select', 'default': 'relu', 'options': ['relu', 'selu', 'gelu']},
+        'activation': {'type': 'select', 'options': ['relu', 'selu', 'gelu']},
     },
     'mlp_flip': {
         'depth': {'type': 'int', 'default': 2, 'min': 1, 'max': 10},
