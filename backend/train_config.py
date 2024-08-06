@@ -48,7 +48,7 @@ MODEL_CONFIG = {
         'layers': {'type': 'int', 'default': 6, 'min': 1, 'max': 50},
         'hidden_size': {'type': 'int', 'default': 100, 'min': 32, 'max': 1024},
         'block_size': {'type': 'int', 'default': 2, 'min': 1, 'max': 8},
-        'activation': {'type': 'select', 'options': ['relu', 'selu', 'gelu']},
+        'activation': {'type': 'select', 'default': 'relu', 'options': ['relu', 'selu', 'gelu']},
     },
     'mlp_flip': {
         'depth': {'type': 'int', 'default': 2, 'min': 1, 'max': 10},
