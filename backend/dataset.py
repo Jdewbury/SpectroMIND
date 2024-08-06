@@ -6,7 +6,9 @@ class RamanSpectra:
     def __init__(self, spectra_dir, label_dir, spectra_interval, seed=42, shuffle=True, num_workers=2, batch_size=16, transform=None):
         if not isinstance(spectra_dir, list):
             spectra_dir = [spectra_dir]
-            
+
+        spectra_interval = [int(interval) for interval in spectra_interval]
+
         assert len(spectra_dir) == len(label_dir) == len(spectra_interval), 'Spectra, labels, and invervals do not align.'
         np.random.seed(seed)
 

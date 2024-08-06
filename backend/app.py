@@ -232,18 +232,15 @@ def handle_train():
             raise ValueError("Model and optimizer must be specified")
 
         spectra_dirs = []
-        print("Saving uploaded files...")
         for file in request.files.getlist('dataFolder'):
             filename = secure_filename(file.filename)
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
             spectra_dirs.append(file_path)
 
         label_dirs = []
         for file in request.files.getlist('labelsFolder'):
             filename = secure_filename(file.filename)
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
             label_dirs.append(file_path)
 
         print(f"Spectra dirs: {spectra_dirs}")
