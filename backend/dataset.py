@@ -4,8 +4,8 @@ import numpy as np
 
 class RamanSpectra:
     def __init__(self, spectra_dir, label_dir, spectra_interval, seed=42, shuffle=True, num_workers=2, batch_size=16, transform=None):
-        if not isinstance(spectra_dir, list):
-            spectra_dir = [spectra_dir]
+        if not isinstance(spectra_interval, list):
+            spectra_interval = [spectra_interval]
 
         spectra_interval = [int(interval) for interval in spectra_interval]
 
