@@ -69,16 +69,17 @@ OPTIMIZER_CONFIG = {
         'weight_decay': {'type': 'float', 'default': 0.0005, 'min': 0, 'max': 0.1, 'step': 0.0001},
     },
     'SGD': {
-        'momentum': {'type': 'float', 'default': 0.9, 'min': 0, 'max': 1, 'step': 0.1},
         'weight_decay': {'type': 'float', 'default': 0.0005, 'min': 0, 'max': 0.1, 'step': 0.0001},
     },
     'SAM': {
         'base_optimizer': {'type': 'select', 'options': ['SGD', 'Adam'], 'default': 'SGD'},
         'rho': {'type': 'float', 'default': 0.05, 'min': 0.01, 'max': 0.1, 'step': 0.01 },
+        'weight_decay': {'type': 'float', 'default': 0.0005, 'min': 0, 'max': 0.1, 'step': 0.0001},
     },
     'ASAM': {
         'base_optimizer': {'type': 'select', 'options': ['SGD', 'Adam'], 'default': 'SGD'},
         'rho': {'type': 'float', 'default': 0.05, 'min': 0.01, 'max': 0.1, 'step': 0.01 },
+        'weight_decay': {'type': 'float', 'default': 0.0005, 'min': 0, 'max': 0.1, 'step': 0.0001},
     },
 }
 

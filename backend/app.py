@@ -190,12 +190,14 @@ def save_filtered_data():
 
 @app.route('/get-train-config', methods=['GET'])
 def get_train_config():
+    print("Received request for train config")
     config = {
         'MODEL_CONFIG': MODEL_CONFIG,
         'OPTIMIZER_CONFIG': OPTIMIZER_CONFIG,
         'GENERAL_CONFIG': GENERAL_CONFIG,
         'SCHEDULER_CONFIG': SCHEDULER_CONFIG
     }
+    print("Sending train config:", config)
     return jsonify(config)
 
 @app.route('/api/stop-training', methods=['POST'])

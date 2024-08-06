@@ -37,7 +37,7 @@ const Train = ({
       setConfig(response.data);
     } catch (error) {
       console.error('Error fetching train config:', error);
-      setErrorDetails('Failed to fetch training configuration. Please try again.');
+      setErrorDetails(`Failed to fetch training configuration. Error: ${error.message}`);
     }
   };
 

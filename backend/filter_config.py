@@ -24,7 +24,7 @@ FILTERS = {
     'Background Removal': {
         'ray_removal_threshold': ray_removal_threshold,
         'baseline_correction': baseline_correction,
-    },
+    }
 }
 
 FILTER_CONFIG = {
