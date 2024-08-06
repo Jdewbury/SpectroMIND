@@ -7,6 +7,8 @@ class RamanSpectra:
         if not isinstance(spectra_interval, list):
             spectra_interval = [spectra_interval]
 
+        print(spectra_interval)
+
         spectra_interval = [int(interval) for interval in spectra_interval]
 
         print(spectra_interval)
@@ -33,6 +35,7 @@ class RamanSpectra:
 
             for i, l in enumerate(np.unique(y)):
                 X_type = X[y==l]
+                print(X_type, interval)
                 num_idxs = len(X_type) // int(interval)
                 split = np.arange(num_idxs)
                 np.random.shuffle(split)
