@@ -228,6 +228,9 @@ def handle_train():
         print(f"Optimizer: {optimizer_name}")
         print(f"Parameters: {parameters}")
 
+        if not model_name or not optimizer_name:
+            raise ValueError("Model and optimizer must be specified")
+
         spectra_dirs = []
         print("Saving uploaded files...")
         for file in request.files.getlist('dataFolder'):
@@ -246,26 +249,15 @@ def handle_train():
         print(f"Spectra dirs: {spectra_dirs}")
         print(f"Label dirs: {label_dirs}")
 
+        if not spectra_dirs or not label_dirs:
+            raise ValueError("Data and label files must be provided")
+
         # Prepare arguments for train_model function
-        args = {key: parameters.get(key, config['default']) for key, config in GENERAL_CONFIG.items()}
+        args = parameters
         args['spectra_dir'] = spectra_dirs
         args['label_dir'] = label_dirs
         args['model'] = model_name
         args['optimizer'] = optimizer_name
-
-        # Add model-specific parameters
-        if model_name in MODEL_CONFIG:
-            for key, config in MODEL_CONFIG[model_name].items():
-                args[key] = parameters.get(key, config['default'])
-
-        # Add optimizer-specific parameters
-        if optimizer_name in OPTIMIZER_CONFIG:
-            for key, config in OPTIMIZER_CONFIG[optimizer_name].items():
-                args[key] = parameters.get(key, config['default'])
-
-        # Add scheduler parameters
-        for key, config in SCHEDULER_CONFIG.items():
-            args[key] = parameters.get(key, config['default'])
 
         print("Starting training process...")
 

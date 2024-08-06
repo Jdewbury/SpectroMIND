@@ -138,7 +138,10 @@ const Train = ({
         acc[key] = parameters[key] !== undefined ? parameters[key] : config.OPTIMIZER_CONFIG[optimizer][key].default;
         return acc;
       }, {}) : {}),
-      scheduler: parameters.scheduler || config.SCHEDULER_CONFIG.type.default,
+      ...(config.SCHEDULER_CONFIG ? Object.keys(config.SCHEDULER_CONFIG).reduce((acc, key) => {
+        acc[key] = parameters[key] !== undefined ? parameters[key] : config.SCHEDULER_CONFIG[key].default;
+        return acc;
+      }, {}) : {}),
     };
 
     const formData = new FormData();
@@ -160,10 +163,14 @@ const Train = ({
         body: formData,
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+  
       if (!response.body) {
         throw new Error('No response body');
       }
-
+  
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
 
