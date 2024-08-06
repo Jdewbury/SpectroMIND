@@ -59,9 +59,9 @@ MODEL_CONFIG = {
 }
 
 OPTIMIZERS = {
-    'Adam': optim.Adam,
-    'SGD': optim.SGD,
-    'RMSprop': optim.RMSprop,
+    'Adam',
+    'SGD',
+    'SAM',
 }
 
 OPTIMIZER_CONFIG = {
@@ -72,9 +72,13 @@ OPTIMIZER_CONFIG = {
         'momentum': {'type': 'float', 'default': 0.9, 'min': 0, 'max': 1, 'step': 0.1},
         'weight_decay': {'type': 'float', 'default': 0.0005, 'min': 0, 'max': 0.1, 'step': 0.0001},
     },
-    'RMSprop': {
-        'alpha': {'type': 'float', 'default': 0.99, 'min': 0, 'max': 1, 'step': 0.01},
-        'weight_decay': {'type': 'float', 'default': 0.0005, 'min': 0, 'max': 0.1, 'step': 0.0001},
+    'SAM': {
+        'base_optimizer': {'type': 'select', 'options': ['SGD', 'Adam']},
+        'rho': {'type': 'float', 'default': 0.05, 'min': 0.01, 'max': 0.1, 'step': 0.01 },
+    },
+    'ASAM': {
+        'base_optimizer': {'type': 'select', 'options': ['SGD', 'Adam']},
+        'rho': {'type': 'float', 'default': 0.05, 'min': 0.01, 'max': 0.1, 'step': 0.01 },
     },
 }
 

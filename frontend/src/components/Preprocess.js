@@ -25,6 +25,7 @@ const Preprocess = () => {
   const [filterOptions, setFilterOptions] = useState({});
   const [filterInputs, setFilterInputs] = useState({});
   const [filterConfig, setFilterConfig] = useState({});
+  const [selectedSpectrumIndex, setSelectedSpectrumIndex] = useState(0);
 
   const fetchDirectoryStructure = async () => {
     let isMounted = true;
@@ -58,9 +59,11 @@ const Preprocess = () => {
     setSelectedFile(file);
     try {
       const response = await axios.get(`${API_BASE_URL}/file-data/${file}`);
-      setFileData(response.data.data);
+      const data = response.data.data;
+      setFileData(data);
       setFilteredData(null);
       setActiveFilters({});
+      setSelectedSpectrumIndex(0);
     } catch (error) {
       console.error('Error fetching file data:', error);
       setError('Failed to fetch file data. Please try again.');
@@ -329,34 +332,58 @@ const Preprocess = () => {
     return Array.from({ length }, (_, index) => index);
   };
 
+  const renderSpectrum = () => {
+    const dataToRender = filteredData || fileData;
+    if (!dataToRender) return null;
+
+    const spectrumsCount = dataToRender.length;
+    const currentSpectrum = dataToRender[selectedSpectrumIndex];
+
+    return (
+      <div>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart
+            data={currentSpectrum.map((y, index) => ({
+              x: Math.round(getWavenumberRange(currentSpectrum.length)[index]),
+              y
+            }))}
+          >   
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="x" tick={{ fontSize: 12 }}/>
+            <YAxis 
+              label={{ 
+                value: 'Intensity', 
+                angle: -90, 
+                position: 'insideLeft', 
+                offset: 0, 
+                style: { textAnchor: 'middle' } 
+              }} 
+            />
+            <Tooltip />
+            <Line type="monotone" dataKey="y" stroke="#8884d8" dot={false} />
+          </LineChart>
+        </ResponsiveContainer>
+        {spectrumsCount > 1 && (
+          <div className="navigation-container">
+          <label className="navigation-button" onClick={() => setSelectedSpectrumIndex(prev => Math.max(0, prev - 1))}>
+            Previous
+          </label>
+          <span>Spectrum {selectedSpectrumIndex + 1} of {spectrumsCount}</span>
+          <label className="navigation-button" onClick={() => setSelectedSpectrumIndex(prev => Math.min(spectrumsCount - 1, prev + 1))}>
+            Next
+          </label>
+        </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="preprocess-container">
       <div className="main-content">
-        <div className="data-visualization">
+      <div className="data-visualization">
           {fileData || filteredData ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart
-                data={(filteredData || fileData).map((y, index) => ({
-                  x: Math.round(getWavenumberRange(fileData.length)[index]),
-                  y
-                }))}
-              >   
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="x" tick={{ fontSize: 12 }}/>
-                <YAxis 
-                  label={{ 
-                    value: 'Intensity', 
-                    angle: -90, 
-                    position: 'insideLeft', 
-                    offset: 0, 
-                    style: { textAnchor: 'middle' } 
-                  }} 
-                />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="y" stroke="#8884d8" dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
+            renderSpectrum()
           ) : (
             <div className="no-data">
               <p>Please select file to visualize</p>

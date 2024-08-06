@@ -78,6 +78,8 @@ def file_data(filename):
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         if os.path.exists(file_path):
             data = np.load(file_path)
+            if data.ndim == 1:
+                data = data.reshape(1, -1)  # Convert single spectrum to 2D array
             return jsonify({'data': data.tolist()})
         else:
             return jsonify({'error': 'File not found'}), 404
@@ -140,14 +142,18 @@ def apply_filters():
     filter_inputs = data.get('filterInputs', {})
 
     try:
-        for filter_name in applied_filters:
-            for category, filters in FILTERS.items():
-                if filter_name in filters:
-                    filter_function = filters[filter_name]
-                    filter_params = filter_inputs.get(filter_name, {})
-                    input_data = filter_function(input_data, **filter_params)
-                    break
-        return jsonify({'filtered_data': input_data.tolist()})
+        filtered_data = []
+        for spectrum in input_data:
+            filtered_spectrum = spectrum
+            for filter_name in applied_filters:
+                for category, filters in FILTERS.items():
+                    if filter_name in filters:
+                        filter_function = filters[filter_name]
+                        filter_params = filter_inputs.get(filter_name, {})
+                        filtered_spectrum = filter_function(filtered_spectrum, **filter_params)
+                        break
+            filtered_data.append(filtered_spectrum)
+        return jsonify({'filtered_data': np.array(filtered_data).tolist()})
     except Exception as e:
         error_message = f"Error applying filter '{filter_name}': {str(e)}"
         print(error_message)
@@ -157,7 +163,7 @@ def apply_filters():
 def save_filtered_data():
     data = request.get_json()
     filename = data.get('filename')
-    filtered_data = data.get('data')
+    filtered_data = np.array(data.get('data'))
     output_folder = data.get('outputFolder', '')  # Default to empty string if not provided
 
     if not filename or filtered_data is None:
@@ -175,7 +181,7 @@ def save_filtered_data():
         file_path = os.path.join(full_output_folder, new_filename)
 
         # Save the filtered data
-        np.save(file_path, np.array(filtered_data))
+        np.save(file_path, filtered_data)
 
         relative_path = os.path.relpath(file_path, app.config['UPLOAD_FOLDER'])
         return jsonify({'message': f'Filtered data saved as {relative_path}'}), 200
