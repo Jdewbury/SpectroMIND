@@ -15,6 +15,7 @@ const Train = ({
 }) => {
   const [model, setModel] = useState('');
   const [optimizer, setOptimizer] = useState('');
+  const [scheduler, setScheduler] = useState('');
   const [parameters, setParameters] = useState({});
   const [dataFolder, setDataFolder] = useState(null);
   const [labelsFolder, setLabelsFolder] = useState(null);
@@ -64,6 +65,18 @@ const Train = ({
     });
   };
 
+  const handleSchedulerChange = (e) => {
+    const selectedScheduler = e.target.value;
+    setScheduler(selectedScheduler);
+    setParameters(prevParams => {
+      const newParams = { ...prevParams };
+      Object.keys(config.SCHEDULER_CONFIG[selectedScheduler] || {}).forEach(key => {
+        newParams[key] = config.SCHEDULER_CONFIG[selectedScheduler][key].default;
+      });
+      return newParams;
+    });
+  };
+
   const handleParameterChange = (paramName, value) => {
     setParameters(prevParams => ({
       ...prevParams,
@@ -82,6 +95,7 @@ const Train = ({
   const validateInputs = () => {
     if (!model) return 'Please select a model.';
     if (!optimizer) return 'Please select an optimizer.';
+    if (!scheduler) return 'Please select a scheduler.';
     if (!dataFolder || dataFolder.length === 0) return 'Please upload data files.';
     if (!labelsFolder || labelsFolder.length === 0) return 'Please upload label files.';
     return null;
@@ -138,8 +152,8 @@ const Train = ({
         acc[key] = parameters[key] !== undefined ? parameters[key] : config.OPTIMIZER_CONFIG[optimizer][key].default;
         return acc;
       }, {}) : {}),
-      ...(config.SCHEDULER_CONFIG ? Object.keys(config.SCHEDULER_CONFIG).reduce((acc, key) => {
-        acc[key] = parameters[key] !== undefined ? parameters[key] : config.SCHEDULER_CONFIG[key].default;
+      ...(config.SCHEDULER_CONFIG[scheduler] ? Object.keys(config.SCHEDULER_CONFIG[scheduler]).reduce((acc, key) => {
+        acc[key] = parameters[key] !== undefined ? parameters[key] : config.SCHEDULER_CONFIG[scheduler][key].default;
         return acc;
       }, {}) : {}),
     };
@@ -147,6 +161,7 @@ const Train = ({
     const formData = new FormData();
     formData.append('model', model);
     formData.append('optimizer', optimizer);
+    formData.append('scheduler', scheduler);
     formData.append('parameters', JSON.stringify(allParams));
     
     Array.from(dataFolder).forEach(file => {
@@ -322,6 +337,15 @@ const Train = ({
             </select>
           </div>
           <div className="input-group">
+            <label>Scheduler:</label>
+            <select value={scheduler} onChange={handleSchedulerChange}>
+              <option value="">Select a scheduler</option>
+              {config.SCHEDULER_CONFIG && Object.keys(config.SCHEDULER_CONFIG).map(schedulerName => (
+                <option key={schedulerName} value={schedulerName}>{schedulerName}</option>
+              ))}
+            </select>
+          </div>
+          <div className="input-group">
             <label>Data Folder:</label>
             <input type="file" accept=".npy" multiple onChange={handleDataFolderUpload} />
           </div>
@@ -354,12 +378,14 @@ const Train = ({
           >
             General
           </span>
-          <span 
-            className={`tab ${activeTab === 'scheduler' ? 'active' : ''}`}
-            onClick={() => setActiveTab('scheduler')}
-          >
-            Scheduler
-          </span>
+          {scheduler && (
+            <span 
+              className={`tab ${activeTab === 'scheduler' ? 'active' : ''}`}
+              onClick={() => setActiveTab('scheduler')}
+            >
+              Scheduler
+            </span>
+          )}
           {model && (
             <span 
               className={`tab ${activeTab === 'model' ? 'active' : ''}`}
@@ -384,10 +410,10 @@ const Train = ({
               {renderParameterInputs(config.GENERAL_CONFIG)}
             </div>
           )}
-          {activeTab === 'scheduler' && config.SCHEDULER_CONFIG && (
+          {activeTab === 'scheduler' && scheduler && config.SCHEDULER_CONFIG && config.SCHEDULER_CONFIG[scheduler] && (
             <div>
-              <h3>Scheduler</h3>
-              {renderParameterInputs(config.SCHEDULER_CONFIG)}
+              <h3>{scheduler} Parameters</h3>
+              {renderParameterInputs(config.SCHEDULER_CONFIG[scheduler])}
             </div>
           )}
           {activeTab === 'model' && model && config.MODEL_CONFIG && config.MODEL_CONFIG[model] && (

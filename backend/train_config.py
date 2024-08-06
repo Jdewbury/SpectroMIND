@@ -48,7 +48,7 @@ MODEL_CONFIG = {
         'layers': {'type': 'int', 'default': 6, 'min': 1, 'max': 50},
         'hidden_size': {'type': 'int', 'default': 100, 'min': 32, 'max': 1024},
         'block_size': {'type': 'int', 'default': 2, 'min': 1, 'max': 8},
-        'activation': {'type': 'select', 'options': ['relu', 'selu', 'gelu']},
+        'activation': {'type': 'select', 'options': ['relu', 'selu', 'gelu'], 'default': 'relu'},
     },
     'mlp_flip': {
         'depth': {'type': 'int', 'default': 2, 'min': 1, 'max': 10},
@@ -73,17 +73,27 @@ OPTIMIZER_CONFIG = {
         'weight_decay': {'type': 'float', 'default': 0.0005, 'min': 0, 'max': 0.1, 'step': 0.0001},
     },
     'SAM': {
-        'base_optimizer': {'type': 'select', 'options': ['SGD', 'Adam']},
+        'base_optimizer': {'type': 'select', 'options': ['SGD', 'Adam'], 'default': 'SGD'},
         'rho': {'type': 'float', 'default': 0.05, 'min': 0.01, 'max': 0.1, 'step': 0.01 },
     },
     'ASAM': {
-        'base_optimizer': {'type': 'select', 'options': ['SGD', 'Adam']},
+        'base_optimizer': {'type': 'select', 'options': ['SGD', 'Adam'], 'default': 'SGD'},
         'rho': {'type': 'float', 'default': 0.05, 'min': 0.01, 'max': 0.1, 'step': 0.01 },
     },
 }
 
+SCHEDULERS = {
+    'step',
+    'cosine'
+}
+
 SCHEDULER_CONFIG = {
-    'type': {'type': 'select', 'options': ['step', 'cosine'], 'default': 'step'},
-    'step_size': {'type': 'int', 'default': 30, 'min': 1, 'max': 100},
-    'gamma': {'type': 'float', 'default': 0.1, 'min': 0.01, 'max': 1, 'step': 0.01},
+    'step': {
+        'step_size': {'type': 'int', 'default': 50, 'min': 1, 'max': 100},
+        'gamma': {'type': 'float', 'default': 0.1, 'min': 0.01, 'max': 1, 'step': 0.01},
+    },
+    'cosine': {
+        'T_max': {'type': 'int', 'default': 50, 'min': 1, 'max': 100},
+        'eta_min': {'type': 'float', 'default': 0, 'min': 0, 'max': 1, 'step': 0.01},
+    }
 }

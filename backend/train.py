@@ -13,10 +13,10 @@ from dataset import RamanSpectra
 
 import sys; sys.path.append("..")
 
-from train_config import MODELS, MODEL_CONFIG, OPTIMIZERS, OPTIMIZER_CONFIG, GENERAL_CONFIG, SCHEDULER_CONFIG
+from train_config import MODELS, MODEL_CONFIG, OPTIMIZERS, SCHEDULERS, OPTIMIZER_CONFIG, GENERAL_CONFIG, SCHEDULER_CONFIG
 
 def train_model(args, progress_callback=None, stop_flag=None):
-    dir = f"{args['optimizer']}{'_' + args['base_optimizer'] if args['optimizer'] in ['SAM', 'ASAM'] else ''}_{args['seed']}"
+    dir = f"{args['optimizer']}{'_' + args.get('base_optimizer', None) if args['optimizer'] in ['SAM', 'ASAM'] else ''}_{args['seed']}"
 
     unique_dir = None
     if args['save']:
@@ -43,11 +43,12 @@ def train_model(args, progress_callback=None, stop_flag=None):
 
     criterion = smooth_crossentropy
 
-    optimizer, base_optimizer = get_optimizer(model, args['optimizer'], args['learning_rate'], args['base_optimizer'],
-                                              args.get('rho', 0.05), args['weight_decay'])
+    optimizer, base_optimizer = get_optimizer(model, args['optimizer'], args['learning_rate'], args.get('base_optimizer', None),
+                                              args.get('rho', 0.05), args.get('weight_decay', None))
 
     scheduler_optimizer = optimizer.base_optimizer if args['optimizer'] in ['SAM', 'ASAM'] else optimizer
-    scheduler = get_scheduler(args['scheduler'], scheduler_optimizer, args['epochs'], args['lr_step'])
+    scheduler = get_scheduler(args['scheduler'], scheduler_optimizer, args['epochs'], args.get('gamma', None), 
+                              args.get('step_size', None), args.get('T_max', None))
 
     print('Starting Training')
 
@@ -187,6 +188,7 @@ if __name__ == "__main__":
     # Add model and optimizer arguments
     parser.add_argument('--model', type=str, choices=list(MODELS.keys()), help='Model architecture to use.')
     parser.add_argument('--optimizer', type=str, choices=list(OPTIMIZERS.keys()), help='Optimizer to be used.')
+    parser.add_argument('--scheduler', type=str, choices=list(SCHEDULERS.keys()), help='Scheduler to be used.')
 
     # Parse arguments
     args = parser.parse_args()
@@ -207,9 +209,10 @@ if __name__ == "__main__":
                 args_dict[key] = config['default']
 
     # Add scheduler parameters
-    for key, config in SCHEDULER_CONFIG.items():
-        if key not in args_dict:
-            args_dict[key] = config['default']
+    if args.scheduler in SCHEDULER_CONFIG:
+        for key, config in SCHEDULER_CONFIG[args.scheduler].items():
+            if key not in args_dict:
+                args_dict[key] = config['default']
 
     scores, save_dir = train_model(args_dict)
     print(f"Training completed. Scores: {scores}")

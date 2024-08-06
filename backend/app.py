@@ -19,7 +19,7 @@ from train import train_model
 from flask import Response
 
 from backend.filter_config import FILTERS, FILTER_CONFIG
-from backend.train_config import MODELS, MODEL_CONFIG, OPTIMIZERS, OPTIMIZER_CONFIG, GENERAL_CONFIG, SCHEDULER_CONFIG
+from train_config import MODELS, MODEL_CONFIG, OPTIMIZERS, SCHEDULERS, OPTIMIZER_CONFIG, GENERAL_CONFIG, SCHEDULER_CONFIG
 
 app = Flask(__name__)
 CORS(app)
@@ -222,14 +222,16 @@ def handle_train():
         print("Received training request")
         model_name = request.form.get('model')
         optimizer_name = request.form.get('optimizer')
+        scheduler_name = request.form.get('scheduler')
         parameters = json.loads(request.form.get('parameters'))
         
         print(f"Model: {model_name}")
         print(f"Optimizer: {optimizer_name}")
+        print(f"Scheduler: {scheduler_name}")
         print(f"Parameters: {parameters}")
 
-        if not model_name or not optimizer_name:
-            raise ValueError("Model and optimizer must be specified")
+        if not model_name or not optimizer_name or not scheduler_name:
+            raise ValueError("Model, optimizer, and scheduler must be specified")
 
         spectra_dirs = []
         print("Saving uploaded files...")
@@ -258,6 +260,7 @@ def handle_train():
         args['label_dir'] = label_dirs
         args['model'] = model_name
         args['optimizer'] = optimizer_name
+        args['scheduler'] = scheduler_name 
 
         print("Starting training process...")
 
