@@ -3,26 +3,32 @@ import torch
 import numpy as np
 
 class RamanSpectra:
-    def __init__(self, spectra_dir, label_dir, spectra_interval, seed=42, shuffle=True, num_workers=2, batch_size=16, transform=None):
-        if not isinstance(spectra_interval, list):
-            spectra_interval = [spectra_interval]
+    def __init__(self, spectra_dir, label_dir, spectra_interval=None, seed=42, shuffle=True, num_workers=2, batch_size=16, test_only=False):
+        if spectra_interval:
+            if not isinstance(spectra_interval, list):
+                spectra_interval = [spectra_interval]
 
-        spectra_interval = [int(interval) for interval in spectra_interval]
+            spectra_interval = [int(interval) for interval in spectra_interval]
+            assert len(spectra_dir) == len(label_dir) == len(spectra_interval), 'Spectra, labels, and invervals do not align.'
 
-        assert len(spectra_dir) == len(label_dir) == len(spectra_interval), 'Spectra, labels, and invervals do not align.'
         np.random.seed(seed)
 
-        X_train, X_val, X_test, y_train, y_val, y_test = self._get_splits(spectra_dir, label_dir, spectra_interval)
-        
-        train_dataset = RamanSpectraDataset(X_train, y_train, transform=ToFloatTensor())
-        val_dataset = RamanSpectraDataset(X_val, y_val, transform=ToFloatTensor())
-        test_dataset = RamanSpectraDataset(X_test, y_test, transform=ToFloatTensor())
+        if test_only:
+            X_test, y_test = self._load_test_set(spectra_dir, label_dir)
+        else:
 
-        self.train = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
-        self.val = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers)
+            X_train, X_val, X_test, y_train, y_val, y_test = self._get_splits(spectra_dir, label_dir, spectra_interval)
+            
+            train_dataset = RamanSpectraDataset(X_train, y_train, transform=ToFloatTensor())
+            val_dataset = RamanSpectraDataset(X_val, y_val, transform=ToFloatTensor())
+
+            self.train = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+            self.val = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers)
+        
+        test_dataset = RamanSpectraDataset(X_test, y_test, transform=ToFloatTensor())
         self.test = DataLoader(test_dataset, batch_size=batch_size, num_workers=num_workers)
 
-    def _get_splits(self, spectra_dir, label_dir, spectra_interval):
+    def _get_splits(self, spectra_dir, label_dir, spectra_interval=None):
         X_train, X_val, X_test, y_train, y_val, y_test = [], [], [], [], [], []
 
         for spectra, label, interval in zip(spectra_dir, label_dir, spectra_interval):
@@ -48,6 +54,17 @@ class RamanSpectra:
                 y_test.extend([i]*interval)
 
         return X_train, X_val, X_test, y_train, y_val, y_test
+
+    def _load_test_set(self, spectra_dir, label_dir):
+        X_test, y_test = [], []
+
+        for spectra, label in zip(spectra_dir, label_dir):
+            X = np.load(spectra)
+            y = np.load(label)
+            X_test.extend(X)
+            y_test.extend(y)
+
+        return X_test, y_test
 
 class RamanSpectraDataset(Dataset):
     def __init__(self, X, y, transform=None):

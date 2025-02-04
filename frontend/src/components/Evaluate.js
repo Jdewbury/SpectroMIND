@@ -8,19 +8,15 @@ const Evaluate = () => {
   const [weights, setWeights] = useState(null);
   const [datasets, setDatasets] = useState([]);
   const [labels, setLabels] = useState([]);
-  const [intervals, setIntervals] = useState('');
   const [results, setResults] = useState(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isTestSet, setIsTestSet] = useState(false);
 
   const handleFileChange = (event, setterFunction) => {
     const files = Array.from(event.target.files);
     setterFunction(files);
-  };
-
-  const handleIntervalChange = (event) => {
-    setIntervals(event.target.value);
   };
 
   const handleParamChange = (event) => {
@@ -29,6 +25,10 @@ const Evaluate = () => {
 
   const handleWeightChange = (event) => {
     setWeights(event.target.files[0]);
+  };
+
+  const handleIsTestSetChange = (event) => {
+    setIsTestSet(event.target.checked);
   };
 
   const allowedExtensions = ['npy', 'pth'];
@@ -41,7 +41,7 @@ const Evaluate = () => {
   const handleEvaluate = async () => {
     console.log('Starting evaluation...');
     if (!params || !weights || datasets.length === 0 || labels.length === 0 || !intervals) {
-      setError('Please upload all required files and specify intervals');
+      setError('Please upload all required files');
       return;
     }
   
@@ -88,7 +88,7 @@ const Evaluate = () => {
     labels.forEach((label, index) => {
       formData.append(`label_${index}`, label);
     });
-    formData.append('intervals', intervals);
+    formData.append('is_test_set', isTestSet);
   
     setIsLoading(true);
     try {
@@ -186,14 +186,20 @@ const Evaluate = () => {
         <div className="input-group">
           <label>Dataset Files (.npy)</label>
           <input type="file" accept=".npy" multiple onChange={(e) => handleFileChange(e, setDatasets)} />
-        </div>
+        </div> 
         <div className="input-group">
           <label>Label Files (.npy)</label>
           <input type="file" accept=".npy" multiple onChange={(e) => handleFileChange(e, setLabels)} />
         </div>
         <div className="input-group">
-          <label>Spectra Intervals (comma-separated)</label>
-          <input type="text" value={intervals} onChange={handleIntervalChange} />
+        <label>
+            <input
+              type="checkbox"
+              checked={isTestSet}
+              onChange={handleIsTestSetChange}
+            />
+            Is Test Set Only
+          </label>
         </div>
         <button onClick={handleEvaluate} disabled={isLoading}>
           {isLoading ? 'Evaluating...' : 'Evaluate'}

@@ -24,6 +24,10 @@ FILTERS = {
     'Background Removal': {
         'ray_removal_threshold': ray_removal_threshold,
         'baseline_correction': baseline_correction,
+    },
+    'Background Removal2': {
+        'ray_removal_threshold2': ray_removal_threshold,
+        'baseline_correction2': baseline_correction,
     }
 }
 
@@ -36,7 +40,7 @@ FILTER_CONFIG = {
             'min': 0,
             'max': 10000,
             'step': 1
-        }
+        },
     },
     'baseline_correction': {
         'offset': {

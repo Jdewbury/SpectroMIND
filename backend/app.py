@@ -5,11 +5,9 @@ import numpy as np
 import os
 import torch
 from model.resnet_1d import ResNet
-from model.mlp_flip import MLPMixer1D_flip
 from flask_cors import CORS
 import traceback
 
-from model.resnet_1d import ResNet
 from dataset import RamanSpectra
 from utils.smooth_cross_entropy import smooth_crossentropy
 import time
@@ -22,7 +20,13 @@ from backend.filter_config import FILTERS, FILTER_CONFIG
 from train_config import MODELS, MODEL_CONFIG, OPTIMIZERS, SCHEDULERS, OPTIMIZER_CONFIG, GENERAL_CONFIG, SCHEDULER_CONFIG
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 ALLOWED_EXTENSIONS = {'npy', 'pth'}
 
@@ -170,17 +174,14 @@ def save_filtered_data():
         return jsonify({'error': 'Invalid data'}), 400
 
     try:
-        # Create a new filename for the filtered data
         base, ext = os.path.splitext(os.path.basename(filename))
         new_filename = f"{base}_filtered{ext}"
         
-        # Create the output folder if it doesn't exist
         full_output_folder = os.path.join(app.config['UPLOAD_FOLDER'], output_folder)
         os.makedirs(full_output_folder, exist_ok=True)
         
         file_path = os.path.join(full_output_folder, new_filename)
 
-        # Save the filtered data
         np.save(file_path, filtered_data)
 
         relative_path = os.path.relpath(file_path, app.config['UPLOAD_FOLDER'])
@@ -332,6 +333,7 @@ def evaluate():
 
         params_file = request.files['params']
         weights_file = request.files['weights']
+        is_test_set = request.form.get('is_test_set', 'false').lower() == 'true'
 
         if not params_file.filename.endswith('.npy'):
             print("Invalid params file type")
@@ -362,7 +364,6 @@ def evaluate():
             print("Invalid file type in uploaded files")
             return jsonify({'error': 'Invalid file type'}), 400
 
-        # Save uploaded files
         params_path = os.path.join(UPLOAD_FOLDER, secure_filename(params_file.filename))
         weights_path = os.path.join(UPLOAD_FOLDER, secure_filename(weights_file.filename))
         dataset_paths = []
@@ -380,7 +381,6 @@ def evaluate():
             dataset_paths.append(dataset_path)
             label_paths.append(label_path)
 
-        # Load parameters and model weights
         print("Loading parameters and model weights...")
         params = np.load(params_path, allow_pickle=True).item()
         print(params)
@@ -395,12 +395,10 @@ def evaluate():
         
         model.load_state_dict(torch.load(weights_path, map_location=torch.device('cpu')))
 
-        # Load dataset
         print("Loading dataset...")
-        dataset = RamanSpectra(dataset_paths, label_paths, intervals, params['seed'], True,
-                               num_workers=2, batch_size=params['batch_size'])
+        dataset = RamanSpectra(dataset_paths, label_paths, params['spectra_interval'], params['seed'], params['shuffle'],
+                                   num_workers=2, batch_size=params['batch_size'], test_only=True)
 
-        # Perform evaluation
         print("Performing evaluation...")
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         model = model.to(device)
@@ -436,10 +434,8 @@ def evaluate():
         test_loss = np.mean(batch_loss)
         test_accuracy = np.mean(batch_acc)
 
-        # Calculate confusion matrix
         confusion_matrix = metrics.confusion_matrix(all_targets, all_predictions)
         
-        # Normalize confusion matrix
         cm_normalized = confusion_matrix.astype('float') / confusion_matrix.sum(axis=1)[:, np.newaxis]
         cm_normalized_list = cm_normalized.tolist()
         class_labels_list = np.arange(params['num_classes']).tolist()
@@ -476,6 +472,8 @@ def after_request(response):
     return response
 
 if __name__ == '__main__':
+    print(f"Starting server with upload folder: {UPLOAD_FOLDER}")
     if not os.path.exists(UPLOAD_FOLDER):
+        print(f"Creating upload folder: {UPLOAD_FOLDER}")
         os.makedirs(UPLOAD_FOLDER)
-    app.run(debug=False, threaded=True)
+    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)

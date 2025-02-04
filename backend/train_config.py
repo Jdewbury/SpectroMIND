@@ -1,4 +1,3 @@
-import torch.optim as optim
 from model.resnet_1d import ResNet
 from model.mlp_flip import MLPMixer1D_flip
 
