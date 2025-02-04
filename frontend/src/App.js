@@ -6,7 +6,7 @@ function App() {
   return (
     <div className="app">
       <div className="container">
-        <h1 className="title">SpectroMIND</h1>
+        <h1 className="title">SpectroMind</h1>
         <Main />
       </div>
     </div>
